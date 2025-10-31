@@ -10,6 +10,13 @@ import * as THREE from 'three';
 
 import SimpleNeuralCanvas from './shaders/SimpleNeuralCanvas';
 import ParticleSystem from './shaders/ParticleSystem';
+import FractalMandelbrot from './shaders/FractalMandelbrot';
+import DNAHelix from './shaders/DNAHelix';
+import GalaxySpiral from './shaders/GalaxySpiral';
+import ScreenshotCapture from './ScreenshotCapture';
+import AIIntegration from './AIIntegration';
+import MusicSync from './MusicSync';
+import PerformanceMonitor from './PerformanceMonitor';
 
 function AudioReactiveController({ children }) {
   const [audioData, setAudioData] = useState({ frequency: 0, amplitude: 0 });
@@ -60,6 +67,9 @@ export default function UltimateMasterCanvas() {
     quantum: { name: '⚛️ Quantum Field', color: '#8338ec' },
     liquid: { name: '🌊 Liquid Paint', color: '#3a86ff' },
     holographic: { name: '👁️ Holographic', color: '#00ffff' },
+    fractal: { name: '🌀 Fractal Mandelbrot', color: '#ff9500' },
+    dna: { name: '🧬 DNA Helix', color: '#00ff88' },
+    galaxy: { name: '🌌 Galaxy Spiral', color: '#4a00ff' },
     ultimate: { name: '🚀 ULTIMATE MODE', color: '#ff4081' }
   };
 
@@ -208,6 +218,27 @@ export default function UltimateMasterCanvas() {
                 </mesh>
               )}
               
+              {(mode === 'fractal' || mode === 'ultimate') && (
+                <FractalMandelbrot 
+                  intensity={intensity + audioData.amplitude}
+                  zoom={1 + audioData.frequency * 2}
+                />
+              )}
+              
+              {(mode === 'dna' || mode === 'ultimate') && (
+                <DNAHelix 
+                  intensity={intensity + audioData.amplitude}
+                  speed={1 + audioData.frequency}
+                />
+              )}
+              
+              {(mode === 'galaxy' || mode === 'ultimate') && (
+                <GalaxySpiral 
+                  intensity={intensity + audioData.amplitude}
+                  starCount={Math.floor(particleCount / 2)}
+                />
+              )}
+              
               {mode !== 'ultimate' && (
                 <ParticleSystem 
                   count={Math.floor(particleCount / 2)} 
@@ -218,6 +249,20 @@ export default function UltimateMasterCanvas() {
               {/* Post-processing effects temporarily disabled for stability */}
             </Suspense>
           </Canvas>
+          
+          <ScreenshotCapture onCapture={(dataURL) => console.log('Screenshot captured:', dataURL)} />
+          
+          <AIIntegration 
+            onStyleChange={(newIntensity) => setIntensity(newIntensity)}
+            onColorChange={(colors) => console.log('AI suggested colors:', colors)}
+          />
+          
+          <MusicSync 
+            onBeatDetected={() => console.log('Beat detected!')}
+            onFrequencyData={(data) => console.log('Music data:', data)}
+          />
+          
+          <PerformanceMonitor />
           
           <div 
             className="absolute inset-0 pointer-events-none"
