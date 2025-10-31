@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 export default function ScreenshotCapture({ onCapture }) {
   const { gl, scene, camera } = useThree();

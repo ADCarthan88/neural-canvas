@@ -10,13 +10,14 @@ import * as THREE from 'three';
 
 import SimpleNeuralCanvas from './shaders/SimpleNeuralCanvas';
 import ParticleSystem from './shaders/ParticleSystem';
-import FractalMandelbrot from './shaders/FractalMandelbrot';
-import DNAHelix from './shaders/DNAHelix';
-import GalaxySpiral from './shaders/GalaxySpiral';
-import ScreenshotCapture from './ScreenshotCapture';
-import AIIntegration from './AIIntegration';
-import MusicSync from './MusicSync';
-import PerformanceMonitor from './PerformanceMonitor';
+// Temporarily simplified imports to avoid errors
+// import FractalMandelbrot from './shaders/FractalMandelbrot';
+// import DNAHelix from './shaders/DNAHelix';
+// import GalaxySpiral from './shaders/GalaxySpiral';
+// import ScreenshotCapture from './ScreenshotCapture';
+// import AIIntegration from './AIIntegration';
+// import MusicSync from './MusicSync';
+// import PerformanceMonitor from './PerformanceMonitor';
 
 function AudioReactiveController({ children }) {
   const [audioData, setAudioData] = useState({ frequency: 0, amplitude: 0 });
@@ -218,25 +219,26 @@ export default function UltimateMasterCanvas() {
                 </mesh>
               )}
               
+              {/* Advanced shaders temporarily disabled for stability */}
               {(mode === 'fractal' || mode === 'ultimate') && (
-                <FractalMandelbrot 
-                  intensity={intensity + audioData.amplitude}
-                  zoom={1 + audioData.frequency * 2}
-                />
+                <mesh>
+                  <torusKnotGeometry args={[1, 0.3, 128, 16]} />
+                  <meshStandardMaterial color="#ff9500" wireframe />
+                </mesh>
               )}
               
               {(mode === 'dna' || mode === 'ultimate') && (
-                <DNAHelix 
-                  intensity={intensity + audioData.amplitude}
-                  speed={1 + audioData.frequency}
-                />
+                <mesh>
+                  <cylinderGeometry args={[0.1, 0.1, 4, 8]} />
+                  <meshStandardMaterial color="#00ff88" wireframe />
+                </mesh>
               )}
               
               {(mode === 'galaxy' || mode === 'ultimate') && (
-                <GalaxySpiral 
-                  intensity={intensity + audioData.amplitude}
-                  starCount={Math.floor(particleCount / 2)}
-                />
+                <mesh>
+                  <sphereGeometry args={[2, 32, 32]} />
+                  <meshStandardMaterial color="#4a00ff" wireframe />
+                </mesh>
               )}
               
               {mode !== 'ultimate' && (
@@ -250,19 +252,11 @@ export default function UltimateMasterCanvas() {
             </Suspense>
           </Canvas>
           
-          <ScreenshotCapture onCapture={(dataURL) => console.log('Screenshot captured:', dataURL)} />
-          
-          <AIIntegration 
-            onStyleChange={(newIntensity) => setIntensity(newIntensity)}
-            onColorChange={(colors) => console.log('AI suggested colors:', colors)}
-          />
-          
-          <MusicSync 
-            onBeatDetected={() => console.log('Beat detected!')}
-            onFrequencyData={(data) => console.log('Music data:', data)}
-          />
-          
-          <PerformanceMonitor />
+          {/* Advanced features temporarily disabled for stability */}
+          {/* <ScreenshotCapture onCapture={(dataURL) => console.log('Screenshot captured:', dataURL)} /> */}
+          {/* <AIIntegration onStyleChange={(newIntensity) => setIntensity(newIntensity)} /> */}
+          {/* <MusicSync onBeatDetected={() => console.log('Beat detected!')} /> */}
+          {/* <PerformanceMonitor /> */}
           
           <div 
             className="absolute inset-0 pointer-events-none"

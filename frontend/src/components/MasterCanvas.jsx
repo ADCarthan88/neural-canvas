@@ -1,5 +1,5 @@
-import UltimateMasterCanvas from './UltimateMasterCanvas';
+import InclusiveNeuralCanvas from './InclusiveNeuralCanvas';
 
 export default function MasterCanvas() {
-  return <UltimateMasterCanvas />;
+  return <InclusiveNeuralCanvas />;
 }
