@@ -14,6 +14,8 @@ import OptimizedParticleSystem from './OptimizedParticleSystem';
 import AICommandEngine from '../lib/AICommandEngine';
 import useMobileDetection from '../hooks/useMobileDetection';
 import useTouchGestures from '../hooks/useTouchGestures';
+import ExportPanel from './ExportPanel';
+import AIGenerationPanel from './AIGenerationPanel';
 
 // Optimized visual modes
 const modes = {
@@ -107,6 +109,14 @@ export default function PerformanceNeuralCanvas() {
   });
   const [showStats, setShowStats] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
+  
+  // Export states
+  const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const canvasRef = useRef(null);
+  const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
 
   // Initialize performance manager
   useEffect(() => {
@@ -177,6 +187,34 @@ export default function PerformanceNeuralCanvas() {
   }, [executeAICommand]);
 
   const gestureState = useTouchGestures(handleTouchGesture);
+  
+  // Get current canvas state for saving
+  const getCurrentCanvasState = useCallback(() => {
+    return {
+      mode,
+      intensity,
+      particleCount,
+      primaryColor,
+      secondaryColor,
+      speed,
+      morphing,
+      performanceSettings: {
+        quality: performanceStats.quality,
+        fps: performanceStats.fps
+      }
+    };
+  }, [mode, intensity, particleCount, primaryColor, secondaryColor, speed, morphing, performanceStats]);
+  
+  // Load canvas state
+  const handleLoadCanvasState = useCallback((state) => {
+    if (state.mode) setMode(state.mode);
+    if (state.intensity !== undefined) setIntensity(state.intensity);
+    if (state.particleCount) setParticleCount(state.particleCount);
+    if (state.primaryColor) setPrimaryColor(state.primaryColor);
+    if (state.secondaryColor) setSecondaryColor(state.secondaryColor);
+    if (state.speed !== undefined) setSpeed(state.speed);
+    if (state.morphing !== undefined) setMorphing(state.morphing);
+  }, []);
 
   // Performance-based canvas settings
   const getCanvasSettings = useCallback(() => {
@@ -304,7 +342,13 @@ export default function PerformanceNeuralCanvas() {
       <Canvas
         camera={{ position: [0, 0, 8], fov: 60 }}
         gl={canvasSettings}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, scene, camera }) => {
+          // Store references for export
+          rendererRef.current = gl;
+          sceneRef.current = scene;
+          cameraRef.current = camera;
+          canvasRef.current = gl.domElement;
+          
           // Additional WebGL optimizations
           gl.setPixelRatio(canvasSettings.pixelRatio);
           gl.setClearColor(0x000000, 1);
@@ -369,6 +413,54 @@ export default function PerformanceNeuralCanvas() {
         </Suspense>
       </Canvas>
 
+      {/* AI Generation Button */}
+      <button
+        onClick={() => setShowAIPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(255, 0, 255, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(255, 0, 255, 0.3)',
+          border: '2px solid #ff00ff'
+        }}
+        title="AI Generation"
+      >
+        🤖
+      </button>
+      
+      {/* Export Button */}
+      <button
+        onClick={() => setShowExportPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '90px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(0, 255, 0, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(0, 255, 0, 0.3)',
+          border: '2px solid #00ff00'
+        }}
+        title="Save & Export"
+      >
+        💾
+      </button>
+      
       {/* Performance Grade Indicator */}
       <div style={{
         position: 'absolute',
@@ -391,6 +483,31 @@ export default function PerformanceNeuralCanvas() {
       }}>
         {performanceStats.grade}
       </div>
+      
+      {/* AI Generation Panel */}
+      <AIGenerationPanel
+        canvasState={getCurrentCanvasState()}
+        isVisible={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+        onApplyToCanvas={(aiResult) => {
+          // Apply AI-generated style to canvas
+          console.log('Applying AI result to canvas:', aiResult);
+          setAiResponse(`🎨 Applied AI style: ${aiResult.style}`);
+          setTimeout(() => setAiResponse(''), 3000);
+        }}
+      />
+      
+      {/* Export Panel */}
+      <ExportPanel
+        canvasRef={canvasRef}
+        rendererRef={rendererRef}
+        sceneRef={sceneRef}
+        cameraRef={cameraRef}
+        canvasState={getCurrentCanvasState()}
+        onLoadState={handleLoadCanvasState}
+        isVisible={showExportPanel}
+        onClose={() => setShowExportPanel(false)}
+      />
     </div>
   );
 }

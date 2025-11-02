@@ -5,6 +5,8 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import AICommandEngine from '../lib/AICommandEngine';
+import ExportPanel from './ExportPanel';
+import AIGenerationPanel from './AIGenerationPanel';
 
 // Visual mode configurations
 const modes = {
@@ -197,6 +199,14 @@ export default function InclusiveNeuralCanvas() {
   // AI response state
   const [aiResponse, setAiResponse] = useState('');
   const [aiConfidence, setAiConfidence] = useState(0);
+  
+  // Export states
+  const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const canvasRef = useRef(null);
+  const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
 
   // Color blind friendly palettes
   const colorBlindPalettes = {
@@ -537,6 +547,40 @@ export default function InclusiveNeuralCanvas() {
       setIsListening(true);
     }
   };
+  
+  // Get current canvas state for saving
+  const getCurrentCanvasState = useCallback(() => {
+    return {
+      mode,
+      intensity,
+      particleCount,
+      primaryColor,
+      secondaryColor,
+      speed,
+      morphing,
+      colorBlindMode,
+      highContrast,
+      reducedMotion,
+      accessibility: {
+        voiceControl: isListening,
+        cameraActive: cameraActive
+      }
+    };
+  }, [mode, intensity, particleCount, primaryColor, secondaryColor, speed, morphing, colorBlindMode, highContrast, reducedMotion, isListening, cameraActive]);
+  
+  // Load canvas state
+  const handleLoadCanvasState = useCallback((state) => {
+    if (state.mode) setMode(state.mode);
+    if (state.intensity !== undefined) setIntensity(state.intensity);
+    if (state.particleCount) setParticleCount(state.particleCount);
+    if (state.primaryColor) setPrimaryColor(state.primaryColor);
+    if (state.secondaryColor) setSecondaryColor(state.secondaryColor);
+    if (state.speed !== undefined) setSpeed(state.speed);
+    if (state.morphing !== undefined) setMorphing(state.morphing);
+    if (state.colorBlindMode) setColorBlindMode(state.colorBlindMode);
+    if (state.highContrast !== undefined) setHighContrast(state.highContrast);
+    if (state.reducedMotion !== undefined) setReducedMotion(state.reducedMotion);
+  }, []);
 
   const colorBlindModeNames = {
     normal: '🌈 Full Color Vision',
@@ -895,6 +939,13 @@ export default function InclusiveNeuralCanvas() {
           alpha: true,
           powerPreference: "high-performance"
         }}
+        onCreated={({ gl, scene, camera }) => {
+          // Store references for export
+          rendererRef.current = gl;
+          sceneRef.current = scene;
+          cameraRef.current = camera;
+          canvasRef.current = gl.domElement;
+        }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={highContrast ? 0.6 : 0.4} />
@@ -936,6 +987,77 @@ export default function InclusiveNeuralCanvas() {
           animation: (isListening || cameraActive) && !reducedMotion ? 'pulse 2s ease-in-out infinite' : 'none'
         }}
       ></div>
+      
+      {/* AI Generation Button */}
+      <button
+        onClick={() => setShowAIPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(255, 0, 255, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(255, 0, 255, 0.3)',
+          border: '2px solid #ff00ff'
+        }}
+        title="AI Generation"
+      >
+        🤖
+      </button>
+      
+      {/* Export Button */}
+      <button
+        onClick={() => setShowExportPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '90px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(0, 255, 0, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(0, 255, 0, 0.3)',
+          border: '2px solid #00ff00'
+        }}
+        title="Save & Export"
+      >
+        💾
+      </button>
+      
+      {/* AI Generation Panel */}
+      <AIGenerationPanel
+        canvasState={getCurrentCanvasState()}
+        isVisible={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+        onApplyToCanvas={(aiResult) => {
+          setAiResponse(`🎨 Applied AI style: ${aiResult.style}`);
+          setTimeout(() => setAiResponse(''), 3000);
+        }}
+      />
+      
+      {/* Export Panel */}
+      <ExportPanel
+        canvasRef={canvasRef}
+        rendererRef={rendererRef}
+        sceneRef={sceneRef}
+        cameraRef={cameraRef}
+        canvasState={getCurrentCanvasState()}
+        onLoadState={handleLoadCanvasState}
+        isVisible={showExportPanel}
+        onClose={() => setShowExportPanel(false)}
+      />
     </div>
   );
 }

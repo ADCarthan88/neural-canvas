@@ -12,6 +12,8 @@ import * as THREE from 'three';
 import AICommandEngine from '../lib/AICommandEngine';
 import useMobileDetection from '../hooks/useMobileDetection';
 import useTouchGestures from '../hooks/useTouchGestures';
+import ExportPanel from './ExportPanel';
+import AIGenerationPanel from './AIGenerationPanel';
 
 // Visual mode configurations
 const modes = {
@@ -192,9 +194,17 @@ export default function MobileNeuralCanvas() {
   // Mobile-specific states
   const [showControls, setShowControls] = useState(false);
   const [touchFeedback, setTouchFeedback] = useState('');
+  const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   
   const aiEngine = useRef(new AICommandEngine());
   const [aiResponse, setAiResponse] = useState('');
+  
+  // Canvas references for export
+  const canvasRef = useRef(null);
+  const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
 
   // Touch gesture mappings
   const touchGestureCommands = {
@@ -256,6 +266,35 @@ export default function MobileNeuralCanvas() {
   }, [mode, executeAICommand]);
 
   const gestureState = useTouchGestures(handleTouchGesture);
+  
+  // Get current canvas state for saving
+  const getCurrentCanvasState = useCallback(() => {
+    return {
+      mode,
+      intensity,
+      particleCount,
+      primaryColor,
+      secondaryColor,
+      speed,
+      morphing,
+      deviceInfo: {
+        isMobile: deviceInfo.isMobile,
+        orientation: deviceInfo.orientation,
+        screenSize: deviceInfo.screenSize
+      }
+    };
+  }, [mode, intensity, particleCount, primaryColor, secondaryColor, speed, morphing, deviceInfo]);
+  
+  // Load canvas state
+  const handleLoadCanvasState = useCallback((state) => {
+    if (state.mode) setMode(state.mode);
+    if (state.intensity !== undefined) setIntensity(state.intensity);
+    if (state.particleCount) setParticleCount(state.particleCount);
+    if (state.primaryColor) setPrimaryColor(state.primaryColor);
+    if (state.secondaryColor) setSecondaryColor(state.secondaryColor);
+    if (state.speed !== undefined) setSpeed(state.speed);
+    if (state.morphing !== undefined) setMorphing(state.morphing);
+  }, []);
 
   // Adjust particle count based on device
   useEffect(() => {
@@ -306,6 +345,13 @@ export default function MobileNeuralCanvas() {
             alpha: true,
             powerPreference: "high-performance",
             pixelRatio: Math.min(deviceInfo.pixelRatio, 2) // Limit pixel ratio
+          }}
+          onCreated={({ gl, scene, camera }) => {
+            // Store references for export
+            rendererRef.current = gl;
+            sceneRef.current = scene;
+            cameraRef.current = camera;
+            canvasRef.current = gl.domElement;
           }}
         >
           <Suspense fallback={null}>
@@ -363,6 +409,52 @@ export default function MobileNeuralCanvas() {
         </div>
       )}
 
+      {/* AI Generation Button */}
+      <button
+        onClick={() => setShowAIPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '90px',
+          left: '20px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(255, 0, 255, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(255, 0, 255, 0.3)',
+          border: '2px solid #ff00ff'
+        }}
+      >
+        🤖
+      </button>
+      
+      {/* Export Button */}
+      <button
+        onClick={() => setShowExportPanel(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(0, 255, 0, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(0, 255, 0, 0.3)',
+          border: '2px solid #00ff00'
+        }}
+      >
+        💾
+      </button>
+      
       {/* Mobile Controls Toggle */}
       <button
         onClick={() => setShowControls(prev => !prev)}
@@ -439,6 +531,29 @@ export default function MobileNeuralCanvas() {
         <div>✨ {particleCount}</div>
         <div>⚡ {intensity.toFixed(1)}</div>
       </div>
+      
+      {/* AI Generation Panel */}
+      <AIGenerationPanel
+        canvasState={getCurrentCanvasState()}
+        isVisible={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+        onApplyToCanvas={(aiResult) => {
+          setAiResponse(`🎨 Applied AI style: ${aiResult.style}`);
+          setTimeout(() => setAiResponse(''), 3000);
+        }}
+      />
+      
+      {/* Export Panel */}
+      <ExportPanel
+        canvasRef={canvasRef}
+        rendererRef={rendererRef}
+        sceneRef={sceneRef}
+        cameraRef={cameraRef}
+        canvasState={getCurrentCanvasState()}
+        onLoadState={handleLoadCanvasState}
+        isVisible={showExportPanel}
+        onClose={() => setShowExportPanel(false)}
+      />
     </div>
   );
 }
