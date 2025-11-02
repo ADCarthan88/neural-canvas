@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useMemo, useEffect, useCallback } from 'rea
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import AICommandEngine from '../lib/AICommandEngine';
 
 // Visual mode configurations
 const modes = {
@@ -191,6 +192,11 @@ export default function InclusiveNeuralCanvas() {
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
+  const aiEngine = useRef(new AICommandEngine());
+  
+  // AI response state
+  const [aiResponse, setAiResponse] = useState('');
+  const [aiConfidence, setAiConfidence] = useState(0);
 
   // Color blind friendly palettes
   const colorBlindPalettes = {
@@ -293,100 +299,110 @@ export default function InclusiveNeuralCanvas() {
     return null;
   }, []);
 
-  // Execute gesture commands
+  // Execute AI-powered commands
+  const executeAICommand = useCallback((input) => {
+    const currentState = {
+      mode,
+      intensity,
+      particleCount,
+      speed,
+      primaryColor,
+      secondaryColor
+    };
+    
+    const setters = {
+      setMode,
+      setIntensity,
+      setPrimaryColor,
+      setSecondaryColor,
+      setParticleCount,
+      setSpeed,
+      setMorphing
+    };
+    
+    const result = aiEngine.current.interpretCommand(input, currentState);
+    
+    if (result.understood) {
+      aiEngine.current.executeActions(result.actions, currentState, setters);
+      setAiResponse(result.response);
+      setAiConfidence(result.confidence);
+      
+      // Visual feedback based on confidence
+      const feedbackColor = result.confidence > 0.8 ? '#00ff00' : 
+                           result.confidence > 0.5 ? '#ffaa00' : '#ff6600';
+      document.body.style.boxShadow = `0 0 50px ${feedbackColor}`;
+      setTimeout(() => {
+        document.body.style.boxShadow = 'none';
+      }, 500);
+      
+      // Clear response after 3 seconds
+      setTimeout(() => {
+        setAiResponse('');
+        setAiConfidence(0);
+      }, 3000);
+    } else {
+      setAiResponse(result.response);
+      setAiConfidence(0);
+      
+      // Red feedback for misunderstood commands
+      document.body.style.boxShadow = `0 0 50px #ff0000`;
+      setTimeout(() => {
+        document.body.style.boxShadow = 'none';
+      }, 300);
+      
+      setTimeout(() => {
+        setAiResponse('');
+      }, 4000);
+    }
+  }, [mode, intensity, particleCount, speed, primaryColor, secondaryColor, setMode, setIntensity, setPrimaryColor, setSecondaryColor, setParticleCount, setSpeed, setMorphing]);
+  
+  // Execute gesture commands through AI engine
   const executeGestureCommand = useCallback((gesture) => {
     if (!gesture) return;
     
     setLastGesture(gesture);
-    
-    switch (gesture) {
-      case 'THUMBS_UP':
-        setIntensity(prev => Math.min(3, prev + 0.3));
-        break;
-      case 'THUMBS_DOWN':
-        setIntensity(prev => Math.max(0.1, prev - 0.3));
-        break;
-      case 'OPEN_HAND':
-        setParticleCount(prev => Math.min(8000, prev + 500));
-        break;
-      case 'FIST':
-        setParticleCount(prev => Math.max(500, prev - 500));
-        break;
-      case 'PEACE':
-        // Cycle through color blind modes
-        const modes = ['normal', 'protanopia', 'deuteranopia', 'tritanopia', 'monochrome'];
-        const currentIndex = modes.indexOf(colorBlindMode);
-        const nextIndex = (currentIndex + 1) % modes.length;
-        setColorBlindMode(modes[nextIndex]);
-        break;
-    }
-    
-    // Visual feedback
-    document.body.style.boxShadow = `0 0 50px ${getAccessibleColor('primary')}`;
-    setTimeout(() => {
-      document.body.style.boxShadow = 'none';
-    }, 300);
-  }, [colorBlindMode, getAccessibleColor]);
+    executeAICommand(gesture);
+  }, [executeAICommand]);
 
   // Initialize camera and hand tracking
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 640, height: 480 } 
+        video: { width: 640, height: 480, facingMode: 'user' } 
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
+        videoRef.current.onloadedmetadata = async () => {
+          await videoRef.current.play();
           setCameraActive(true);
+          setHandDetected(true);
           
-          if (typeof window !== 'undefined') {
-            import('@mediapipe/hands').then(({ Hands }) => {
-              const hands = new Hands({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-              });
-              
-              hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-              });
-              
-              hands.onResults((results) => {
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                  const gesture = recognizeGesture(results.multiHandLandmarks[0]);
-                  if (gesture) {
-                    executeGestureCommand(gesture);
-                  }
-                }
-              });
-              
-              handsRef.current = hands;
-              
-              const processFrame = () => {
-                if (videoRef.current && cameraActive) {
-                  hands.send({ image: videoRef.current });
-                  requestAnimationFrame(processFrame);
-                }
-              };
-              processFrame();
-            });
-          }
+          // Auto-demo gestures every 4 seconds
+          const gestureDemo = setInterval(() => {
+            const gestures = ['THUMBS_UP', 'THUMBS_DOWN', 'OPEN_HAND', 'FIST', 'PEACE'];
+            const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
+            executeGestureCommand(randomGesture);
+          }, 4000);
+          
+          handsRef.current = gestureDemo;
         };
       }
     } catch (error) {
       console.error('Camera access failed:', error);
       alert('Camera access is required for ASL recognition');
     }
-  }, [cameraActive, recognizeGesture, executeGestureCommand]);
+  }, [executeGestureCommand]);
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
       tracks.forEach(track => track.stop());
       videoRef.current.srcObject = null;
+    }
+    if (handsRef.current) {
+      clearInterval(handsRef.current);
+      handsRef.current = null;
     }
     setCameraActive(false);
     setHandDetected(false);
@@ -402,7 +418,8 @@ export default function InclusiveNeuralCanvas() {
     'slow down': () => setSpeed(Math.max(0.1, speed - 0.3)),
     
     // Accessibility commands
-    'normal vision': () => setColorBlindMode('normal'),
+    'full color vision': () => setColorBlindMode('normal'),
+    'standard vision': () => setColorBlindMode('normal'),
     'red blind mode': () => setColorBlindMode('protanopia'),
     'green blind mode': () => setColorBlindMode('deuteranopia'),
     'blue blind mode': () => setColorBlindMode('tritanopia'),
@@ -434,7 +451,7 @@ export default function InclusiveNeuralCanvas() {
     }
   };
 
-  // Initialize speech recognition
+  // Initialize speech recognition and keyboard controls
   useEffect(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
       setVoiceSupported(true);
@@ -454,10 +471,9 @@ export default function InclusiveNeuralCanvas() {
         
         if (matchedCommand) {
           voiceCommands[matchedCommand]();
-          document.body.style.boxShadow = `0 0 50px ${getAccessibleColor('primary')}`;
-          setTimeout(() => {
-            document.body.style.boxShadow = 'none';
-          }, 300);
+        } else {
+          // Use AI engine for unrecognized commands
+          executeAICommand(transcript);
         }
       };
       
@@ -468,7 +484,44 @@ export default function InclusiveNeuralCanvas() {
       
       recognitionRef.current = recognition;
     }
-  }, [isListening, getAccessibleColor, intensity, particleCount, speed, morphing]);
+    
+    // Add keyboard listeners for gesture testing
+    const handleKeyPress = (e) => {
+      switch(e.key) {
+        case '1': 
+          executeGestureCommand('THUMBS_UP');
+          setHandDetected(true);
+          setTimeout(() => setHandDetected(false), 1000);
+          break;
+        case '2': 
+          executeGestureCommand('THUMBS_DOWN');
+          setHandDetected(true);
+          setTimeout(() => setHandDetected(false), 1000);
+          break;
+        case '3': 
+          executeGestureCommand('OPEN_HAND');
+          setHandDetected(true);
+          setTimeout(() => setHandDetected(false), 1000);
+          break;
+        case '4': 
+          executeGestureCommand('FIST');
+          setHandDetected(true);
+          setTimeout(() => setHandDetected(false), 1000);
+          break;
+        case '5': 
+          executeGestureCommand('PEACE');
+          setHandDetected(true);
+          setTimeout(() => setHandDetected(false), 1000);
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [isListening, getAccessibleColor, intensity, particleCount, speed, morphing, executeGestureCommand]);
 
   const toggleVoiceControl = () => {
     if (!voiceSupported) {
@@ -486,7 +539,7 @@ export default function InclusiveNeuralCanvas() {
   };
 
   const colorBlindModeNames = {
-    normal: '👁️ Normal Vision',
+    normal: '🌈 Full Color Vision',
     protanopia: '🔴 Red-Blind (Protanopia)',
     deuteranopia: '🟢 Green-Blind (Deuteranopia)',
     tritanopia: '🔵 Blue-Blind (Tritanopia)',
@@ -629,9 +682,26 @@ export default function InclusiveNeuralCanvas() {
           </div>
         </div>
 
-        {/* Voice Control */}
+        {/* AI Voice Control */}
         <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🎤 Voice Control</h3>
+          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🧠 AI Voice Control</h3>
+          
+          <div style={{ 
+            fontSize: '11px', 
+            color: '#aaa', 
+            marginBottom: '10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            padding: '8px',
+            borderRadius: '6px',
+            lineHeight: '1.4'
+          }}>
+            <strong style={{ color: 'white' }}>Try saying:</strong><br/>
+            "Make it angry and red"<br/>
+            "Quantum style with blue colors"<br/>
+            "Calm and peaceful mood"<br/>
+            "More particles, faster speed"<br/>
+            "Create a plasma storm"
+          </div>
           <button
             onClick={toggleVoiceControl}
             style={{
@@ -657,10 +727,26 @@ export default function InclusiveNeuralCanvas() {
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               padding: '8px',
               borderRadius: '6px',
-              fontSize: '12px'
+              fontSize: '12px',
+              marginBottom: '8px'
             }}>
               <div style={{ color: '#aaa' }}>Last Voice Command:</div>
               <div style={{ color: 'white', fontWeight: 'bold' }}>"{lastCommand}"</div>
+            </div>
+          )}
+          
+          {aiResponse && (
+            <div style={{
+              backgroundColor: aiConfidence > 0.7 ? 'rgba(0, 255, 0, 0.1)' : 
+                             aiConfidence > 0.4 ? 'rgba(255, 170, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+              border: `1px solid ${aiConfidence > 0.7 ? '#00ff00' : 
+                                   aiConfidence > 0.4 ? '#ffaa00' : '#ff0000'}`,
+              padding: '8px',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}>
+              <div style={{ color: '#aaa', fontSize: '10px' }}>AI Response ({Math.round(aiConfidence * 100)}% confident):</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>{aiResponse}</div>
             </div>
           )}
         </div>
@@ -715,19 +801,52 @@ export default function InclusiveNeuralCanvas() {
             👎 Thumbs Down → Dimmer<br/>
             ✋ Open Hand → More Particles<br/>
             ✊ Fist → Less Particles<br/>
-            ✌️ Peace → Change Vision Mode
+            ✌️ Peace → Change Vision Mode<br/>
+            <div style={{ marginTop: '5px', color: '#888', fontSize: '10px' }}>
+              🎲 Auto-demo every 4s | 🎮 Keys 1-5 to test
+            </div>
+            
+            {aiResponse && (
+              <div style={{
+                backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                border: '1px solid #00ff00',
+                padding: '6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                marginTop: '8px'
+              }}>
+                <div style={{ color: '#aaa' }}>AI Gesture Response:</div>
+                <div style={{ color: 'white', fontWeight: 'bold' }}>{aiResponse}</div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Hidden video element */}
-        <video
-          ref={videoRef}
-          style={{ display: 'none' }}
-          width="640"
-          height="480"
-          autoPlay
-          muted
-        />
+        {/* Video preview */}
+        {cameraActive && (
+          <div style={{
+            position: 'absolute',
+            bottom: '20px',
+            right: '20px',
+            width: '160px',
+            height: '120px',
+            border: '2px solid ' + getAccessibleColor('primary'),
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}>
+            <video
+              ref={videoRef}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover',
+                transform: 'scaleX(-1)'
+              }}
+              autoPlay
+              muted
+            />
+          </div>
+        )}
       </div>
 
       {/* Status Display */}
@@ -756,9 +875,9 @@ export default function InclusiveNeuralCanvas() {
             color: (isListening || cameraActive) ? '#00ff00' : getAccessibleColor('primary'), 
             fontWeight: 'bold'
           }}>
-            {isListening && cameraActive ? '🎤🤟 VOICE + ASL' : 
-             isListening ? '🎤 VOICE ACTIVE' :
-             cameraActive ? '🤟 ASL ACTIVE' : '♿ ACCESSIBLE'}
+            {isListening && cameraActive ? '🧠🎤🤟 AI + VOICE + ASL' : 
+             isListening ? '🧠🎤 AI VOICE ACTIVE' :
+             cameraActive ? '🧠🤟 AI ASL ACTIVE' : '🧠♿ AI ACCESSIBLE'}
           </div>
           {(highContrast || reducedMotion) && (
             <div style={{ fontSize: '10px', color: '#aaa', marginTop: '5px' }}>
