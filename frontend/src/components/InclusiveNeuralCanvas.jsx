@@ -8,8 +8,10 @@ import AICommandEngine from '../lib/AICommandEngine';
 import { ASLRecognitionEngine } from '../lib/ASLRecognitionEngine';
 import { AICreativeAssistant } from '../lib/AICreativeAssistant';
 import { SubscriptionManager } from '../lib/SubscriptionManager';
+import { AICompanion } from '../lib/AICompanion';
 import ASLInterface from './ASLInterface';
 import AIAssistantPanel from './AIAssistantPanel';
+import AICompanionWidget from './AICompanionWidget';
 import SubscriptionModal from './SubscriptionModal';
 import FeatureGate from './FeatureGate';
 import ExportPanel from './ExportPanel';
@@ -210,6 +212,16 @@ export default function InclusiveNeuralCanvas() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [triggeredFeature, setTriggeredFeature] = useState(null);
   
+  // Companion states
+  const [companionVisible, setCompanionVisible] = useState(true);
+  const [userSessionState, setUserSessionState] = useState({
+    sessionStart: Date.now(),
+    creationsCount: 0,
+    lastInteraction: Date.now(),
+    rapidChanges: 0,
+    justCreated: false
+  });
+  
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
@@ -217,6 +229,7 @@ export default function InclusiveNeuralCanvas() {
   const aslEngine = useRef(new ASLRecognitionEngine());
   const aiAssistant = useRef(new AICreativeAssistant());
   const subscriptionManager = useRef(new SubscriptionManager());
+  const aiCompanion = useRef(new AICompanion());
   
   // AI response state
   const [aiResponse, setAiResponse] = useState('');
@@ -360,6 +373,11 @@ export default function InclusiveNeuralCanvas() {
   const handleUpgradeRequest = useCallback((feature) => {
     setTriggeredFeature(feature);
     setShowSubscriptionModal(true);
+  }, []);
+  
+  // Update user session state for companion
+  const updateUserState = useCallback((changes) => {
+    setUserSessionState(prev => ({ ...prev, ...changes, lastInteraction: Date.now() }));
   }, []);
   
   const executeAICommand = useCallback((input) => {
@@ -1175,6 +1193,18 @@ export default function InclusiveNeuralCanvas() {
           setAiResponse(`🎨 Applied AI style: ${aiResult.style}`);
           setTimeout(() => setAiResponse(''), 3000);
         }}
+      />
+      
+      {/* AI Companion Widget */}
+      <AICompanionWidget
+        companion={aiCompanion.current}
+        userState={{
+          ...userSessionState,
+          sessionDuration: Date.now() - userSessionState.sessionStart,
+          currentMood,
+          isIdle: Date.now() - userSessionState.lastInteraction > 30000
+        }}
+        isVisible={companionVisible}
       />
       
       {/* Subscription Modal */}
