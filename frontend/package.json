@@ -1,6 +1,6 @@
 {
   "name": "neural-canvas-frontend",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,18 +9,51 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@mediapipe/hands": "0.4.1675469240",
-    "@react-three/drei": "9.114.3",
-    "@react-three/fiber": "8.17.10",
-    "@tensorflow-models/handpose": "^0.0.7",
-    "@tensorflow/tfjs": "4.21.0",
     "next": "14.2.33",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "three": "0.169.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.114.3",
+    "three": "^0.169.0",
+    "framer-motion": "^11.11.17",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "@tensorflow/tfjs": "^4.22.0",
+    "socket.io-client": "^4.8.1",
+    "ethers": "^5.7.2",
+    "web3": "^4.15.0",
+    "@openzeppelin/contracts": "^5.1.0",
+    "ipfs-http-client": "^60.0.1",
+    "webrtc-adapter": "^9.0.1"
   },
   "devDependencies": {
-    "eslint": "8.57.0",
-    "eslint-config-next": "14.2.33"
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.33",
+    "typescript": "^5"
+  },
+  "description": "Revolutionary AI-powered neural canvas with multi-language ASL support, real-time collaboration, VR/AR integration, and blockchain NFT capabilities",
+  "keywords": [
+    "neural-canvas",
+    "ai-art",
+    "webgl",
+    "three.js",
+    "asl-recognition",
+    "multi-language",
+    "real-time-collaboration",
+    "vr-ar",
+    "webxr",
+    "blockchain",
+    "nft",
+    "accessibility",
+    "inclusive-design",
+    "metaverse"
+  ],
+  "author": "Neural Canvas Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ADCarthan88/neural-canvas.git"
   }
 }
