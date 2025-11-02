@@ -6,7 +6,9 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import AICommandEngine from '../lib/AICommandEngine';
 import { ASLRecognitionEngine } from '../lib/ASLRecognitionEngine';
+import { AICreativeAssistant } from '../lib/AICreativeAssistant';
 import ASLInterface from './ASLInterface';
+import AIAssistantPanel from './AIAssistantPanel';
 import ExportPanel from './ExportPanel';
 import AIGenerationPanel from './AIGenerationPanel';
 
@@ -196,11 +198,17 @@ export default function InclusiveNeuralCanvas() {
   const [currentSpelling, setCurrentSpelling] = useState('');
   const [recognizedCommand, setRecognizedCommand] = useState(null);
   
+  // AI Assistant states
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [currentMood, setCurrentMood] = useState('calm');
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
   const aiEngine = useRef(new AICommandEngine());
   const aslEngine = useRef(new ASLRecognitionEngine());
+  const aiAssistant = useRef(new AICreativeAssistant());
   
   // AI response state
   const [aiResponse, setAiResponse] = useState('');
@@ -209,6 +217,18 @@ export default function InclusiveNeuralCanvas() {
   // Export states
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  
+  // Initialize AI Assistant
+  useEffect(() => {
+    const moodAnalysis = setInterval(() => {
+      if (aiAssistant.current && currentMood) {
+        const suggestion = aiAssistant.current.analyzeMoodAndSuggest(currentMood);
+        setAiSuggestion(suggestion);
+      }
+    }, 30000);
+    
+    return () => clearInterval(moodAnalysis);
+  }, [currentMood]);
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -316,6 +336,18 @@ export default function InclusiveNeuralCanvas() {
   }, []);
 
   // Execute AI-powered commands
+  // Apply AI Assistant suggestion
+  const applyAISuggestion = useCallback((settings) => {
+    if (settings.colors && settings.colors.length > 0) {
+      setPrimaryColor(settings.colors[0]);
+      if (settings.colors[1]) setSecondaryColor(settings.colors[1]);
+    }
+    if (settings.intensity !== undefined) setIntensity(settings.intensity);
+    if (settings.speed !== undefined) setSpeed(settings.speed);
+    
+    aiAssistant.current?.recordInteraction('suggestion_applied', { settings });
+  }, []);
+  
   const executeAICommand = useCallback((input) => {
     const currentState = {
       mode,
@@ -1038,13 +1070,37 @@ export default function InclusiveNeuralCanvas() {
         }}
       ></div>
       
+      {/* AI Assistant Button */}
+      <button
+        onClick={() => setShowAIAssistant(true)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 15,
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          border: 'none',
+          backgroundColor: 'rgba(138, 43, 226, 0.2)',
+          color: 'white',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(138, 43, 226, 0.3)',
+          border: '2px solid #8a2be2'
+        }}
+        title="AI Creative Assistant"
+      >
+        🧠
+      </button>
+      
       {/* AI Generation Button */}
       <button
         onClick={() => setShowAIPanel(true)}
         style={{
           position: 'absolute',
           bottom: '20px',
-          left: '20px',
+          left: '90px',
           zIndex: 15,
           width: '60px',
           height: '60px',
@@ -1068,7 +1124,7 @@ export default function InclusiveNeuralCanvas() {
         style={{
           position: 'absolute',
           bottom: '20px',
-          left: '90px',
+          left: '160px',
           zIndex: 15,
           width: '60px',
           height: '60px',
@@ -1085,6 +1141,16 @@ export default function InclusiveNeuralCanvas() {
       >
         💾
       </button>
+      
+      {/* AI Creative Assistant Panel */}
+      <AIAssistantPanel
+        aiAssistant={aiAssistant.current}
+        onApplySuggestion={applyAISuggestion}
+        currentMood={currentMood}
+        onMoodChange={setCurrentMood}
+        isVisible={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+      />
       
       {/* AI Generation Panel */}
       <AIGenerationPanel
