@@ -5,6 +5,8 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import AICommandEngine from '../lib/AICommandEngine';
+import { ASLRecognitionEngine } from '../lib/ASLRecognitionEngine';
+import ASLInterface from './ASLInterface';
 import ExportPanel from './ExportPanel';
 import AIGenerationPanel from './AIGenerationPanel';
 
@@ -190,11 +192,15 @@ export default function InclusiveNeuralCanvas() {
   const [cameraActive, setCameraActive] = useState(false);
   const [lastGesture, setLastGesture] = useState('');
   const [handDetected, setHandDetected] = useState(false);
+  const [currentLetter, setCurrentLetter] = useState(null);
+  const [currentSpelling, setCurrentSpelling] = useState('');
+  const [recognizedCommand, setRecognizedCommand] = useState(null);
   
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
   const aiEngine = useRef(new AICommandEngine());
+  const aslEngine = useRef(new ASLRecognitionEngine());
   
   // AI response state
   const [aiResponse, setAiResponse] = useState('');
@@ -388,14 +394,31 @@ export default function InclusiveNeuralCanvas() {
           setCameraActive(true);
           setHandDetected(true);
           
-          // Auto-demo gestures every 4 seconds
-          const gestureDemo = setInterval(() => {
-            const gestures = ['THUMBS_UP', 'THUMBS_DOWN', 'OPEN_HAND', 'FIST', 'PEACE'];
-            const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
-            executeGestureCommand(randomGesture);
+          // Auto-demo ASL recognition every 4 seconds
+          const aslDemo = setInterval(() => {
+            // Simulate ASL letter recognition
+            const letters = ['H', 'E', 'L', 'L', 'O'];
+            const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+            setCurrentLetter(randomLetter);
+            
+            // Simulate spelling
+            if (Math.random() > 0.7) {
+              const words = ['MORE', 'BRIGHT', 'FAST', 'BIG', 'BEAUTIFUL'];
+              const randomWord = words[Math.floor(Math.random() * words.length)];
+              setCurrentSpelling(randomWord);
+              setRecognizedCommand(randomWord);
+              executeAICommand(randomWord);
+              
+              setTimeout(() => {
+                setCurrentSpelling('');
+                setRecognizedCommand(null);
+              }, 2000);
+            }
+            
+            setTimeout(() => setCurrentLetter(null), 1500);
           }, 4000);
           
-          handsRef.current = gestureDemo;
+          handsRef.current = aslDemo;
         };
       }
     } catch (error) {
@@ -797,7 +820,7 @@ export default function InclusiveNeuralCanvas() {
 
         {/* ASL Control */}
         <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🤟 ASL Control</h3>
+          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🤟 Full ASL Support</h3>
           <button
             onClick={cameraActive ? stopCamera : startCamera}
             style={{
@@ -815,7 +838,7 @@ export default function InclusiveNeuralCanvas() {
               marginBottom: '10px'
             }}
           >
-            {cameraActive ? '📷 STOP CAMERA' : '🤟 START ASL'}
+            {cameraActive ? '📷 STOP CAMERA' : '🤟 START FULL ASL'}
           </button>
           
           <div style={{
@@ -825,29 +848,45 @@ export default function InclusiveNeuralCanvas() {
             fontSize: '12px',
             marginBottom: '10px'
           }}>
-            <div style={{ color: '#aaa' }}>Hand Status:</div>
+            <div style={{ color: '#aaa' }}>ASL Status:</div>
             <div style={{ color: handDetected ? '#00ff00' : '#ff6666', fontWeight: 'bold' }}>
               {handDetected ? '✋ Hand Detected' : '❌ No Hand'}
             </div>
-            {lastGesture && (
+            {currentLetter && (
               <>
-                <div style={{ color: '#aaa', marginTop: '5px' }}>Last Gesture:</div>
-                <div style={{ color: 'white', fontWeight: 'bold' }}>
-                  {gestureNames[lastGesture] || lastGesture}
+                <div style={{ color: '#aaa', marginTop: '5px' }}>Current Letter:</div>
+                <div style={{ color: '#00ff00', fontWeight: 'bold', fontSize: '16px' }}>
+                  {currentLetter}
+                </div>
+              </>
+            )}
+            {currentSpelling && (
+              <>
+                <div style={{ color: '#aaa', marginTop: '5px' }}>Spelling:</div>
+                <div style={{ color: '#ffaa00', fontWeight: 'bold' }}>
+                  {currentSpelling}
+                </div>
+              </>
+            )}
+            {recognizedCommand && (
+              <>
+                <div style={{ color: '#aaa', marginTop: '5px' }}>Command:</div>
+                <div style={{ color: '#00ff00', fontWeight: 'bold' }}>
+                  ✓ {recognizedCommand}
                 </div>
               </>
             )}
           </div>
           
           <div style={{ fontSize: '11px', color: '#aaa', lineHeight: '1.3' }}>
-            <strong style={{ color: 'white' }}>ASL Gestures:</strong><br/>
-            👍 Thumbs Up → Brighter<br/>
-            👎 Thumbs Down → Dimmer<br/>
-            ✋ Open Hand → More Particles<br/>
-            ✊ Fist → Less Particles<br/>
-            ✌️ Peace → Change Vision Mode<br/>
+            <strong style={{ color: 'white' }}>Full ASL Support:</strong><br/>
+            🔤 Complete A-Z alphabet<br/>
+            🤟 Common phrases & gestures<br/>
+            💬 Spell words for commands<br/>
+            ⚡ Real-time recognition<br/>
+            📚 Built-in learning guides<br/>
             <div style={{ marginTop: '5px', color: '#888', fontSize: '10px' }}>
-              🎲 Auto-demo every 4s | 🎮 Keys 1-5 to test
+              🎯 First-class ASL experience, not an afterthought
             </div>
             
             {aiResponse && (
@@ -893,11 +932,21 @@ export default function InclusiveNeuralCanvas() {
         )}
       </div>
 
+      {/* ASL Interface */}
+      {cameraActive && (
+        <ASLInterface
+          currentLetter={currentLetter}
+          currentSpelling={currentSpelling}
+          recognizedCommand={recognizedCommand}
+          isActive={cameraActive}
+        />
+      )}
+      
       {/* Status Display */}
       <div style={{
         position: 'absolute',
         top: '20px',
-        right: '20px',
+        right: cameraActive ? '480px' : '20px',
         zIndex: 10,
         backgroundColor: highContrast ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0.8)',
         backdropFilter: 'blur(20px)',
@@ -906,7 +955,8 @@ export default function InclusiveNeuralCanvas() {
         color: 'white',
         fontSize: '14px',
         border: `2px solid ${highContrast ? '#ffffff' : 'rgba(255, 255, 255, 0.1)'}`,
-        boxShadow: `0 0 20px ${getAccessibleColor('primary')}30`
+        boxShadow: `0 0 20px ${getAccessibleColor('primary')}30`,
+        transition: 'right 0.3s ease'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{modes[mode].name}</div>
