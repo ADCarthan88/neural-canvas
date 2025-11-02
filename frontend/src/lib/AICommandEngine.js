@@ -201,6 +201,35 @@ export class AICommandEngine {
     result.understood = result.actions.length > 0;
     result.confidence = Math.min(result.confidence, 1.0);
 
+    // Lower threshold for understanding - be more forgiving
+    if (!result.understood && result.confidence < 0.3) {
+      // Try partial matches with lower confidence
+      const partialMatches = [];
+      
+      // Check for any color words
+      const colorWords = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'white', 'black', 'bright', 'dark'];
+      const foundColors = colorWords.filter(color => processedCommand.includes(color));
+      if (foundColors.length > 0) {
+        partialMatches.push({ type: 'color', value: foundColors[0] });
+      }
+      
+      // Check for intensity words
+      const intensityWords = ['bright', 'dim', 'intense', 'soft', 'strong', 'weak', 'high', 'low'];
+      const foundIntensity = intensityWords.find(word => processedCommand.includes(word));
+      if (foundIntensity) {
+        const action = ['bright', 'intense', 'strong', 'high'].includes(foundIntensity) ? 'increase' : 'decrease';
+        partialMatches.push({ type: 'intensity', action });
+      }
+      
+      // Apply partial matches
+      if (partialMatches.length > 0) {
+        result.actions = partialMatches;
+        result.understood = true;
+        result.confidence = 0.6;
+        result.response = `🎯 I think I understand! Applied: ${partialMatches.map(m => m.type).join(', ')}`;
+      }
+    }
+
     if (!result.understood) {
       // Provide contextual help based on what was attempted
       const suggestions = [];
@@ -324,40 +353,39 @@ export class AICommandEngine {
   }
 
   /**
-   * Calculate string similarity using Levenshtein distance
+   * Calculate string similarity using optimized Levenshtein distance
    */
   calculateSimilarity(str1, str2) {
-    const matrix = [];
+    if (str1 === str2) return 1;
+    if (str1.length === 0 || str2.length === 0) return 0;
+    
+    // Quick similarity check for performance
+    if (str1.includes(str2) || str2.includes(str1)) {
+      return Math.max(str2.length / str1.length, str1.length / str2.length);
+    }
+    
     const len1 = str1.length;
     const len2 = str2.length;
+    const matrix = Array(len2 + 1).fill().map(() => Array(len1 + 1).fill(0));
     
-    if (len1 === 0) return len2 === 0 ? 1 : 0;
-    if (len2 === 0) return 0;
+    for (let i = 0; i <= len1; i++) matrix[0][i] = i;
+    for (let j = 0; j <= len2; j++) matrix[j][0] = j;
     
-    for (let i = 0; i <= len2; i++) {
-      matrix[i] = [i];
-    }
-    
-    for (let j = 0; j <= len1; j++) {
-      matrix[0][j] = j;
-    }
-    
-    for (let i = 1; i <= len2; i++) {
-      for (let j = 1; j <= len1; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
+    for (let j = 1; j <= len2; j++) {
+      for (let i = 1; i <= len1; i++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          matrix[j][i] = matrix[j - 1][i - 1];
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
+          matrix[j][i] = Math.min(
+            matrix[j - 1][i - 1] + 1,
+            matrix[j][i - 1] + 1,
+            matrix[j - 1][i] + 1
           );
         }
       }
     }
     
-    const maxLen = Math.max(len1, len2);
-    return (maxLen - matrix[len2][len1]) / maxLen;
+    return 1 - (matrix[len2][len1] / Math.max(len1, len2));
   }
 
   /**

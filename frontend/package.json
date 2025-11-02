@@ -9,14 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/hands": "0.4.1675469240",
+    "@react-three/drei": "9.114.3",
+    "@react-three/fiber": "8.17.10",
+    "@tensorflow-models/handpose": "^0.0.7",
+    "@tensorflow/tfjs": "4.21.0",
     "next": "14.2.33",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@react-three/fiber": "8.17.10",
-    "@react-three/drei": "9.114.3",
-    "three": "0.169.0",
-    "@mediapipe/hands": "0.4.1675469240",
-    "@tensorflow/tfjs": "4.21.0"
+    "three": "0.169.0"
   },
   "devDependencies": {
     "eslint": "8.57.0",

@@ -29,28 +29,24 @@ export function useTouchGestures(onGesture) {
     const deltaY = currentY - startY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const duration = Date.now() - startTime;
-    const velocity = distance / duration;
     
-    // Gesture thresholds
-    const minDistance = 50;
-    const maxDuration = 1000;
-    const minVelocity = 0.1;
+    // More sensitive thresholds for immediate response
+    const minDistance = 30; // Reduced from 50
+    const maxDuration = 800; // Reduced from 1000
     
-    if (distance < minDistance || duration > maxDuration || velocity < minVelocity) {
+    if (distance < minDistance || duration > maxDuration) {
       return null;
     }
     
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     const absAngle = Math.abs(angle);
     
-    // Swipe direction detection
-    if (absAngle < 30 || absAngle > 150) {
+    // More precise angle detection
+    if (absAngle < 45 || absAngle > 135) {
       return deltaX > 0 ? 'SWIPE_RIGHT' : 'SWIPE_LEFT';
-    } else if (absAngle > 60 && absAngle < 120) {
+    } else {
       return deltaY > 0 ? 'SWIPE_DOWN' : 'SWIPE_UP';
     }
-    
-    return null;
   }, []);
 
   const recognizeTap = useCallback((touch) => {
@@ -60,13 +56,13 @@ export function useTouchGestures(onGesture) {
     );
     const duration = Date.now() - startTime;
     
-    // Tap detection
-    if (distance < 20 && duration < 300) {
+    // More responsive tap detection
+    if (distance < 25 && duration < 250) {
       return 'TAP';
     }
     
-    // Long press detection
-    if (distance < 20 && duration > 500) {
+    // Faster long press detection
+    if (distance < 25 && duration > 400 && duration < 2000) {
       return 'LONG_PRESS';
     }
     
@@ -91,15 +87,16 @@ export function useTouchGestures(onGesture) {
       
       const scale = distance / touchData.current.initialPinchDistance;
       
-      if (scale > 1.2) return 'PINCH_OUT';
-      if (scale < 0.8) return 'PINCH_IN';
+      // More sensitive pinch detection
+      if (scale > 1.15) return 'PINCH_OUT';
+      if (scale < 0.85) return 'PINCH_IN';
     }
     
     if (touches.length === 3) {
       return 'THREE_FINGER_TAP';
     }
     
-    if (touches.length === 4) {
+    if (touches.length >= 4) {
       return 'FOUR_FINGER_TAP';
     }
     

@@ -41,11 +41,12 @@ export class SaveExportManager {
   }
 
   /**
-   * Capture current canvas as image
+   * Capture current canvas as image with validation
    */
   async captureImage(format = 'png', preset = 'wallpaper', customSize = null) {
+    // Comprehensive validation
     if (!this.rendererRef?.current) {
-      throw new Error('Renderer not initialized');
+      throw new Error('Canvas renderer not ready. Please wait for the canvas to load.');
     }
 
     const renderer = this.rendererRef.current;
@@ -53,7 +54,16 @@ export class SaveExportManager {
     const camera = this.cameraRef?.current;
     
     if (!scene || !camera) {
-      throw new Error('Scene or camera not available');
+      throw new Error('3D scene not ready. Please wait for the canvas to fully initialize.');
+    }
+    
+    // Validate format and preset
+    if (!this.exportFormats[format]) {
+      throw new Error(`Unsupported format: ${format}. Use png, jpg, or webp.`);
+    }
+    
+    if (!customSize && !this.presets[preset]) {
+      throw new Error(`Unsupported preset: ${preset}. Use social, wallpaper, mobile, thumbnail, or ultra.`);
     }
 
     // Get export settings
@@ -111,24 +121,48 @@ export class SaveExportManager {
   }
 
   /**
-   * Record video of the canvas
+   * Record video of the canvas with validation
    */
   async recordVideo(duration = 10, fps = 30, format = 'webm', preset = 'wallpaper') {
+    // Comprehensive validation
     if (!this.rendererRef?.current) {
-      throw new Error('Renderer not initialized');
+      throw new Error('Canvas renderer not ready. Please wait for the canvas to load.');
     }
 
     const canvas = this.rendererRef.current.domElement;
+    
+    if (!canvas || !canvas.captureStream) {
+      throw new Error('Video recording not supported in this browser.');
+    }
+    
     const settings = this.presets[preset];
     const formatConfig = this.videoFormats[format];
     
     if (!formatConfig) {
-      throw new Error(`Unsupported video format: ${format}`);
+      throw new Error(`Unsupported video format: ${format}. Use webm or mp4.`);
+    }
+    
+    if (!settings) {
+      throw new Error(`Unsupported preset: ${preset}. Use social, wallpaper, mobile, thumbnail, or ultra.`);
     }
 
     // Check MediaRecorder support
+    if (!window.MediaRecorder) {
+      throw new Error('Video recording not supported in this browser.');
+    }
+    
     if (!MediaRecorder.isTypeSupported(formatConfig.mime)) {
-      throw new Error(`Video format ${format} not supported by browser`);
+      // Try fallback format
+      const fallbackFormat = format === 'webm' ? 'mp4' : 'webm';
+      const fallbackConfig = this.videoFormats[fallbackFormat];
+      
+      if (fallbackConfig && MediaRecorder.isTypeSupported(fallbackConfig.mime)) {
+        console.warn(`${format} not supported, using ${fallbackFormat}`);
+        format = fallbackFormat;
+        formatConfig.mime = fallbackConfig.mime;
+      } else {
+        throw new Error(`Video recording not supported in this browser. Try a different browser.`);
+      }
     }
 
     const stream = canvas.captureStream(fps);
@@ -282,22 +316,38 @@ export class SaveExportManager {
   }
 
   /**
-   * Copy image to clipboard
+   * Copy image to clipboard with fallback
    */
   async copyToClipboard(imageData) {
-    if (!navigator.clipboard || !navigator.clipboard.write) {
-      throw new Error('Clipboard API not supported');
+    // Check for clipboard support
+    if (!navigator.clipboard) {
+      throw new Error('Clipboard not supported in this browser. Try using HTTPS or a modern browser.');
     }
 
     try {
-      const clipboardItem = new ClipboardItem({
-        [imageData.blob.type]: imageData.blob
-      });
+      // Try modern clipboard API
+      if (navigator.clipboard.write && window.ClipboardItem) {
+        const clipboardItem = new ClipboardItem({
+          [imageData.blob.type]: imageData.blob
+        });
+        
+        await navigator.clipboard.write([clipboardItem]);
+        return { success: true };
+      }
       
-      await navigator.clipboard.write([clipboardItem]);
-      return { success: true };
+      // Fallback to text clipboard
+      if (navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText('Neural Canvas creation copied! Paste this link to share: ' + window.location.href);
+        return { success: true, fallback: true };
+      }
+      
+      throw new Error('Clipboard API not available');
+      
     } catch (error) {
-      throw new Error(`Failed to copy to clipboard: ${error.message}`);
+      // Final fallback - create download link
+      console.warn('Clipboard failed, creating download instead:', error);
+      this.downloadFile(imageData.blob, 'neural-canvas-copy.png');
+      return { success: true, downloaded: true };
     }
   }
 
