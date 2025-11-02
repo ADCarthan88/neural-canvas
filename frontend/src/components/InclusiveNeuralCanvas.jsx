@@ -7,8 +7,11 @@ import * as THREE from 'three';
 import AICommandEngine from '../lib/AICommandEngine';
 import { ASLRecognitionEngine } from '../lib/ASLRecognitionEngine';
 import { AICreativeAssistant } from '../lib/AICreativeAssistant';
+import { SubscriptionManager } from '../lib/SubscriptionManager';
 import ASLInterface from './ASLInterface';
 import AIAssistantPanel from './AIAssistantPanel';
+import SubscriptionModal from './SubscriptionModal';
+import FeatureGate from './FeatureGate';
 import ExportPanel from './ExportPanel';
 import AIGenerationPanel from './AIGenerationPanel';
 
@@ -203,12 +206,17 @@ export default function InclusiveNeuralCanvas() {
   const [currentMood, setCurrentMood] = useState('calm');
   const [aiSuggestion, setAiSuggestion] = useState(null);
   
+  // Subscription states
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [triggeredFeature, setTriggeredFeature] = useState(null);
+  
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
   const aiEngine = useRef(new AICommandEngine());
   const aslEngine = useRef(new ASLRecognitionEngine());
   const aiAssistant = useRef(new AICreativeAssistant());
+  const subscriptionManager = useRef(new SubscriptionManager());
   
   // AI response state
   const [aiResponse, setAiResponse] = useState('');
@@ -346,6 +354,12 @@ export default function InclusiveNeuralCanvas() {
     if (settings.speed !== undefined) setSpeed(settings.speed);
     
     aiAssistant.current?.recordInteraction('suggestion_applied', { settings });
+  }, []);
+  
+  // Handle feature upgrade requests
+  const handleUpgradeRequest = useCallback((feature) => {
+    setTriggeredFeature(feature);
+    setShowSubscriptionModal(true);
   }, []);
   
   const executeAICommand = useCallback((input) => {
@@ -1161,6 +1175,14 @@ export default function InclusiveNeuralCanvas() {
           setAiResponse(`🎨 Applied AI style: ${aiResult.style}`);
           setTimeout(() => setAiResponse(''), 3000);
         }}
+      />
+      
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isVisible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        subscriptionManager={subscriptionManager.current}
+        triggeredByFeature={triggeredFeature}
       />
       
       {/* Export Panel */}
