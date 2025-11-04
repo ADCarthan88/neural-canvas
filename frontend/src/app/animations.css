@@ -1,0 +1,72 @@
+/* Neural network animation */
+.neural-network {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border-radius: 50%;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.node:nth-child(1) {
+  transform: rotate(0deg) translateX(60px) rotate(0deg);
+  animation-delay: -1.5s;
+}
+
+.node:nth-child(2) {
+  transform: rotate(45deg) translateX(60px) rotate(-45deg);
+  animation-delay: -1.0s;
+}
+
+.node:nth-child(3) {
+  transform: rotate(90deg) translateX(60px) rotate(-90deg);
+  animation-delay: -0.5s;
+}
+
+.node:nth-child(4) {
+  transform: rotate(135deg) translateX(60px) rotate(-135deg);
+  animation-delay: 0s;
+}
+
+.node:nth-child(5) {
+  transform: rotate(180deg) translateX(60px) rotate(-180deg);
+  animation-delay: 0.5s;
+}
+
+.node:nth-child(6) {
+  transform: rotate(225deg) translateX(60px) rotate(-225deg);
+  animation-delay: 1.0s;
+}
+
+.node:nth-child(7) {
+  transform: rotate(270deg) translateX(60px) rotate(-270deg);
+  animation-delay: 1.5s;
+}
+
+.node:nth-child(8) {
+  transform: rotate(315deg) translateX(60px) rotate(-315deg);
+  animation-delay: 2.0s;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+}

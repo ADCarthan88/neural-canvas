@@ -21,7 +21,7 @@ export default function AIGenerationPanel({
   const [selectedStyle, setSelectedStyle] = useState('neural');
   const [selectedQuality, setSelectedQuality] = useState('standard');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [apiKeyValid, setApiKeyValid] = useState(null);
+  const [apiKeyValid, setApiKeyValid] = useState(false);
 
   // Load API key from localStorage
   useEffect(() => {
@@ -59,12 +59,6 @@ export default function AIGenerationPanel({
 
   // Generate from canvas state
   const generateFromCanvas = useCallback(async () => {
-    if (!apiKeyValid && !customPrompt) {
-      setGenerationProgress('❌ Please set API key or use custom prompt');
-      setTimeout(() => setGenerationProgress(''), 3000);
-      return;
-    }
-
     setIsGenerating(true);
     setGenerationProgress('🎨 Generating AI art from your canvas...');
 
@@ -79,7 +73,7 @@ export default function AIGenerationPanel({
       const result = await aiGenerator.generateImage(prompt, {
         style: selectedStyle,
         quality: selectedQuality,
-        service: apiKeyValid ? 'dalle' : 'huggingface'
+        service: 'backend'
       });
 
       if (result.success) {
@@ -96,21 +90,18 @@ export default function AIGenerationPanel({
       setIsGenerating(false);
       setTimeout(() => setGenerationProgress(''), 5000);
     }
-  }, [aiGenerator, canvasState, customPrompt, selectedStyle, selectedQuality, apiKeyValid]);
+  }, [aiGenerator, canvasState, customPrompt, selectedStyle, selectedQuality]);
 
   // Generate variations
   const generateVariations = useCallback(async () => {
-    if (!apiKeyValid) {
-      setGenerationProgress('❌ API key required for variations');
-      setTimeout(() => setGenerationProgress(''), 3000);
-      return;
-    }
-
     setIsGenerating(true);
     setGenerationProgress('🎨 Generating 3 variations...');
 
     try {
-      const variations = await aiGenerator.generateCanvasVariations(canvasState, 3);
+      const variations = await aiGenerator.generateCanvasVariations(canvasState, 3, {
+        service: 'backend',
+        style: selectedStyle,
+      });
       
       const successfulVariations = variations.filter(v => v.success);
       if (successfulVariations.length > 0) {
@@ -127,7 +118,7 @@ export default function AIGenerationPanel({
       setIsGenerating(false);
       setTimeout(() => setGenerationProgress(''), 5000);
     }
-  }, [aiGenerator, canvasState, apiKeyValid]);
+  }, [aiGenerator, canvasState, selectedStyle]);
 
   // Download image
   const downloadImage = useCallback(async (imageUrl, index) => {
@@ -257,7 +248,7 @@ export default function AIGenerationPanel({
         )}
         
         <div style={{ fontSize: '11px', color: '#aaa', marginTop: '5px' }}>
-          {apiKeyValid ? 'Using DALL-E 3 for premium quality' : 'Will use free Hugging Face service without API key'}
+          {apiKeyValid ? 'Using your OpenAI account for direct generations' : 'Default mode uses the backend OpenAI key—adding your own key is optional.'}
         </div>
       </div>
 
@@ -363,14 +354,14 @@ export default function AIGenerationPanel({
           
           <button
             onClick={generateVariations}
-            disabled={isGenerating || !apiKeyValid}
+            disabled={isGenerating}
             style={{
               padding: '15px',
               borderRadius: '8px',
               border: 'none',
-              backgroundColor: apiKeyValid ? 'rgba(0, 255, 255, 0.3)' : 'rgba(100, 100, 100, 0.3)',
+              backgroundColor: 'rgba(0, 255, 255, 0.3)',
               color: 'white',
-              cursor: (isGenerating || !apiKeyValid) ? 'not-allowed' : 'pointer',
+              cursor: isGenerating ? 'not-allowed' : 'pointer',
               fontWeight: 'bold',
               fontSize: '14px'
             }}

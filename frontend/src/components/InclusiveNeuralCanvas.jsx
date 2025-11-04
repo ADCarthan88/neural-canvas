@@ -694,65 +694,67 @@ export default function InclusiveNeuralCanvas() {
       overflow: 'hidden',
       filter: highContrast ? 'contrast(150%)' : 'none'
     }}>
-      {/* Inclusive Control Panel */}
+      {/* Compact Control Panel */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        left: '20px',
+        top: '10px',
+        left: '10px',
         zIndex: 10,
-        backgroundColor: highContrast ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0.9)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '15px',
-        padding: '25px',
-        border: `3px solid ${(isListening || cameraActive) ? getAccessibleColor('primary') : 'rgba(255, 255, 255, 0.2)'}`,
-        boxShadow: (isListening || cameraActive) ? `0 0 30px ${getAccessibleColor('primary')}` : 'none',
-        width: '420px',
+        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+        backdropFilter: 'blur(15px)',
+        borderRadius: '12px',
+        padding: '12px',
+        border: `2px solid ${(isListening || cameraActive) ? getAccessibleColor('primary') : 'rgba(255, 255, 255, 0.3)'}`,
+        width: '220px',
         maxHeight: '85vh',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        boxShadow: `0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px ${getAccessibleColor('primary')}30`
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-          <div style={{ 
-            width: '24px', 
-            height: '24px', 
-            backgroundColor: (isListening || cameraActive) ? '#00ff00' : '#ff0000', 
-            borderRadius: '50%', 
-            animation: (isListening || cameraActive) ? 'pulse 1s infinite' : 'none',
-            boxShadow: (isListening || cameraActive) ? `0 0 15px #00ff00` : 'none'
-          }}></div>
-          <h2 style={{ 
-            color: highContrast ? '#ffffff' : 'white', 
-            fontWeight: 'bold', 
-            fontSize: '18px',
-            background: highContrast ? 'none' : `linear-gradient(45deg, ${getAccessibleColor('primary')}, ${getAccessibleColor('secondary')})`,
-            WebkitBackgroundClip: highContrast ? 'unset' : 'text',
-            WebkitTextFillColor: highContrast ? '#ffffff' : 'transparent',
-            color: highContrast ? '#ffffff' : 'transparent'
-          }}>
-            ♿🎤🤟 INCLUSIVE NEURAL CANVAS
-          </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ 
+              width: '10px', 
+              height: '10px', 
+              backgroundColor: (isListening || cameraActive) ? '#00ff00' : '#ff4444', 
+              borderRadius: '50%',
+              boxShadow: `0 0 10px ${(isListening || cameraActive) ? '#00ff00' : '#ff4444'}`
+            }}></div>
+            <h2 style={{ 
+              color: 'white', 
+              fontSize: '14px',
+              margin: 0,
+              fontWeight: 'bold'
+            }}>
+              🧠 NEURAL CANVAS
+            </h2>
+          </div>
+          <div style={{ fontSize: '10px', color: '#aaa' }}>
+            {modes[mode].name.split(' ')[0]}
+          </div>
         </div>
 
-        {/* Visual Mode Selection */}
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '15px' }}>🎨 Visual Mode</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '15px' }}>
+        {/* Compact Mode Selection */}
+        <div style={{ marginBottom: '12px' }}>
+          <h3 style={{ color: 'white', fontSize: '12px', marginBottom: '8px', margin: 0, fontWeight: 'bold' }}>🎨 Visual Mode</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
             {Object.entries(modes).map(([key, config]) => (
               <button
                 key={key}
                 onClick={() => setMode(key)}
                 style={{
-                  padding: '10px 8px',
-                  borderRadius: '6px',
-                  border: 'none',
+                  padding: '8px 6px',
+                  borderRadius: '8px',
+                  border: mode === key ? `2px solid ${getAccessibleColor('primary')}` : '2px solid transparent',
                   cursor: 'pointer',
                   background: mode === key ? 
-                    `linear-gradient(45deg, ${getAccessibleColor('primary')}, ${getAccessibleColor('secondary')})` : 
-                    'rgba(255, 255, 255, 0.1)',
+                    `linear-gradient(135deg, ${getAccessibleColor('primary')}20, ${getAccessibleColor('secondary')}20)` : 
+                    'rgba(255, 255, 255, 0.08)',
                   color: 'white',
-                  fontSize: '12px',
+                  fontSize: '10px',
                   fontWeight: mode === key ? 'bold' : 'normal',
                   transition: 'all 0.3s ease',
-                  boxShadow: mode === key ? `0 0 15px ${getAccessibleColor('primary')}50` : 'none'
+                  boxShadow: mode === key ? `0 0 20px ${getAccessibleColor('primary')}40` : 'none',
+                  backdropFilter: 'blur(10px)'
                 }}
               >
                 {config.name}
@@ -761,240 +763,174 @@ export default function InclusiveNeuralCanvas() {
           </div>
         </div>
 
-        {/* Accessibility Settings */}
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '15px' }}>♿ Accessibility</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ color: 'white', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-              Vision Mode
-            </label>
-            <select
-              value={colorBlindMode}
-              onChange={(e) => setColorBlindMode(e.target.value)}
+
+
+        {/* AI Controls */}
+        <div style={{ marginBottom: '12px' }}>
+          <h3 style={{ color: 'white', fontSize: '12px', marginBottom: '8px', margin: 0, fontWeight: 'bold' }}>🤖 AI Controls</h3>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+            <button
+              onClick={toggleVoiceControl}
               style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                flex: 1,
+                padding: '10px 8px',
+                borderRadius: '8px',
+                border: isListening ? `2px solid #ff4444` : `2px solid #00ff44`,
+                cursor: 'pointer',
+                background: isListening ? 'rgba(255, 68, 68, 0.2)' : 'rgba(0, 255, 68, 0.2)',
                 color: 'white',
-                fontSize: '14px'
+                fontSize: '11px',
+                fontWeight: 'bold',
+                boxShadow: isListening ? '0 0 15px #ff444440' : '0 0 15px #00ff4440'
               }}
             >
-              {Object.entries(colorBlindModeNames).map(([key, name]) => (
-                <option key={key} value={key} style={{ backgroundColor: '#333', color: 'white' }}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={highContrast}
-                onChange={(e) => setHighContrast(e.target.checked)}
-                style={{ accentColor: getAccessibleColor('primary') }}
-              />
-              <span style={{ color: 'white', fontSize: '13px' }}>High Contrast</span>
-            </label>
-            
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={reducedMotion}
-                onChange={(e) => setReducedMotion(e.target.checked)}
-                style={{ accentColor: getAccessibleColor('primary') }}
-              />
-              <span style={{ color: 'white', fontSize: '13px' }}>Reduce Motion</span>
-            </label>
-          </div>
-        </div>
-
-        {/* AI Voice Control */}
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🧠 AI Voice Control</h3>
-          
-          <div style={{ 
-            fontSize: '11px', 
-            color: '#aaa', 
-            marginBottom: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            padding: '8px',
-            borderRadius: '6px',
-            lineHeight: '1.4'
-          }}>
-            <strong style={{ color: 'white' }}>Try saying:</strong><br/>
-            "Make it angry and red"<br/>
-            "Quantum style with blue colors"<br/>
-            "Calm and peaceful mood"<br/>
-            "More particles, faster speed"<br/>
-            "Create a plasma storm"
-          </div>
-          <button
-            onClick={toggleVoiceControl}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              background: isListening ? 
-                `linear-gradient(45deg, #ff0000, #ff6666)` : 
-                `linear-gradient(45deg, ${getAccessibleColor('primary')}, ${getAccessibleColor('secondary')})`,
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              marginBottom: '10px'
-            }}
-          >
-            {isListening ? '🛑 STOP VOICE' : '🎤 START VOICE'}
-          </button>
-          
-          {lastCommand && (
-            <div style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              padding: '8px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              marginBottom: '8px'
-            }}>
-              <div style={{ color: '#aaa' }}>Last Voice Command:</div>
-              <div style={{ color: 'white', fontWeight: 'bold' }}>"{lastCommand}"</div>
-            </div>
-          )}
-          
-          {aiResponse && (
-            <div style={{
-              backgroundColor: aiConfidence > 0.7 ? 'rgba(0, 255, 0, 0.1)' : 
-                             aiConfidence > 0.4 ? 'rgba(255, 170, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
-              border: `1px solid ${aiConfidence > 0.7 ? '#00ff00' : 
-                                   aiConfidence > 0.4 ? '#ffaa00' : '#ff0000'}`,
-              padding: '8px',
-              borderRadius: '6px',
-              fontSize: '12px'
-            }}>
-              <div style={{ color: '#aaa', fontSize: '10px' }}>AI Response ({Math.round(aiConfidence * 100)}% confident):</div>
-              <div style={{ color: 'white', fontWeight: 'bold' }}>{aiResponse}</div>
-            </div>
-          )}
-        </div>
-
-        {/* ASL Control */}
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🤟 Full ASL Support</h3>
-          <button
-            onClick={cameraActive ? stopCamera : startCamera}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              background: cameraActive ? 
-                `linear-gradient(45deg, #ff0000, #ff6666)` : 
-                `linear-gradient(45deg, #00ff41, #39ff14)`,
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              marginBottom: '10px'
-            }}
-          >
-            {cameraActive ? '📷 STOP CAMERA' : '🤟 START FULL ASL'}
-          </button>
-          
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            padding: '8px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            marginBottom: '10px'
-          }}>
-            <div style={{ color: '#aaa' }}>ASL Status:</div>
-            <div style={{ color: handDetected ? '#00ff00' : '#ff6666', fontWeight: 'bold' }}>
-              {handDetected ? '✋ Hand Detected' : '❌ No Hand'}
-            </div>
-            {currentLetter && (
-              <>
-                <div style={{ color: '#aaa', marginTop: '5px' }}>Current Letter:</div>
-                <div style={{ color: '#00ff00', fontWeight: 'bold', fontSize: '16px' }}>
-                  {currentLetter}
-                </div>
-              </>
-            )}
-            {currentSpelling && (
-              <>
-                <div style={{ color: '#aaa', marginTop: '5px' }}>Spelling:</div>
-                <div style={{ color: '#ffaa00', fontWeight: 'bold' }}>
-                  {currentSpelling}
-                </div>
-              </>
-            )}
-            {recognizedCommand && (
-              <>
-                <div style={{ color: '#aaa', marginTop: '5px' }}>Command:</div>
-                <div style={{ color: '#00ff00', fontWeight: 'bold' }}>
-                  ✓ {recognizedCommand}
-                </div>
-              </>
-            )}
-          </div>
-          
-          <div style={{ fontSize: '11px', color: '#aaa', lineHeight: '1.3' }}>
-            <strong style={{ color: 'white' }}>Full ASL Support:</strong><br/>
-            🔤 Complete A-Z alphabet<br/>
-            🤟 Common phrases & gestures<br/>
-            💬 Spell words for commands<br/>
-            ⚡ Real-time recognition<br/>
-            📚 Built-in learning guides<br/>
-            <div style={{ marginTop: '5px', color: '#888', fontSize: '10px' }}>
-              🎯 First-class ASL experience, not an afterthought
-            </div>
-            
-            {aiResponse && (
-              <div style={{
-                backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                border: '1px solid #00ff00',
-                padding: '6px',
-                borderRadius: '4px',
-                fontSize: '10px',
-                marginTop: '8px'
-              }}>
-                <div style={{ color: '#aaa' }}>AI Gesture Response:</div>
-                <div style={{ color: 'white', fontWeight: 'bold' }}>{aiResponse}</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Video preview */}
-        {cameraActive && (
-          <div style={{
-            position: 'absolute',
-            bottom: '20px',
-            right: '20px',
-            width: '160px',
-            height: '120px',
-            border: '2px solid ' + getAccessibleColor('primary'),
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <video
-              ref={videoRef}
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover',
-                transform: 'scaleX(-1)'
+              {isListening ? '🛑 STOP' : '🎤 VOICE'}
+            </button>
+            <button
+              onClick={cameraActive ? stopCamera : startCamera}
+              style={{
+                flex: 1,
+                padding: '10px 8px',
+                borderRadius: '8px',
+                border: cameraActive ? `2px solid #ff4444` : `2px solid #00ff44`,
+                cursor: 'pointer',
+                background: cameraActive ? 'rgba(255, 68, 68, 0.2)' : 'rgba(0, 255, 68, 0.2)',
+                color: 'white',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                boxShadow: cameraActive ? '0 0 15px #ff444440' : '0 0 15px #00ff4440'
               }}
-              autoPlay
-              muted
-            />
+            >
+              {cameraActive ? '📷 STOP' : '🤟 ASL'}
+            </button>
+          </div>
+          
+          {(lastCommand || aiResponse) && (
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              padding: '8px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              marginTop: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              {lastCommand && (
+                <div style={{ marginBottom: aiResponse ? '6px' : '0' }}>
+                  <div style={{ color: '#aaa', fontSize: '9px' }}>Voice:</div>
+                  <div style={{ color: 'white', fontWeight: 'bold' }}>"{lastCommand}"</div>
+                </div>
+              )}
+              {aiResponse && (
+                <div>
+                  <div style={{ color: '#aaa', fontSize: '9px' }}>AI ({Math.round(aiConfidence * 100)}%):</div>
+                  <div style={{ color: aiConfidence > 0.7 ? '#00ff00' : aiConfidence > 0.4 ? '#ffaa00' : '#ff6666', fontWeight: 'bold' }}>
+                    {aiResponse}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ASL Status */}
+        {cameraActive && (
+          <div style={{ marginBottom: '12px' }}>
+            <h3 style={{ color: 'white', fontSize: '12px', marginBottom: '8px', margin: 0, fontWeight: 'bold' }}>🤟 ASL Status</h3>
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              padding: '8px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              border: `1px solid ${handDetected ? '#00ff44' : '#ff4444'}`
+            }}>
+              <div style={{ color: handDetected ? '#00ff44' : '#ff4444', fontWeight: 'bold', marginBottom: '4px' }}>
+                {handDetected ? '✋ Hand Detected' : '❌ No Hand'}
+              </div>
+              {currentLetter && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ color: '#aaa', fontSize: '10px' }}>Letter:</span>
+                  <span style={{ color: '#00ff44', fontWeight: 'bold', fontSize: '14px' }}>{currentLetter}</span>
+                </div>
+              )}
+              {currentSpelling && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ color: '#aaa', fontSize: '10px' }}>Word:</span>
+                  <span style={{ color: '#ffaa00', fontWeight: 'bold' }}>{currentSpelling}</span>
+                </div>
+              )}
+              {recognizedCommand && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#aaa', fontSize: '10px' }}>Cmd:</span>
+                  <span style={{ color: '#00ff44', fontWeight: 'bold' }}>✓ {recognizedCommand}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
+        
+        {/* Quick Stats */}
+        <div style={{ marginBottom: '12px' }}>
+          <h3 style={{ color: 'white', fontSize: '12px', marginBottom: '8px', margin: 0, fontWeight: 'bold' }}>📊 Current Settings</h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '6px',
+            fontSize: '10px'
+          }}>
+            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
+              <div style={{ color: '#aaa' }}>Intensity</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>{intensity.toFixed(1)}</div>
+            </div>
+            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
+              <div style={{ color: '#aaa' }}>Speed</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>{getMotionSpeed().toFixed(1)}x</div>
+            </div>
+            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
+              <div style={{ color: '#aaa' }}>Particles</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>{(particleCount/1000).toFixed(1)}K</div>
+            </div>
+            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
+              <div style={{ color: '#aaa' }}>Vision</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>{colorBlindMode === 'normal' ? '🌈' : '♿'}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Keyboard Shortcuts */}
+        <div style={{ fontSize: '9px', color: '#666', lineHeight: '1.2' }}>
+          <div style={{ color: '#aaa', fontWeight: 'bold', marginBottom: '4px' }}>⌨️ Shortcuts:</div>
+          <div>1-5: Test gestures</div>
+          <div>Ctrl+P: Performance mode</div>
+          <div>Ctrl+M: Mode selector</div>
+        </div>
       </div>
+      
+      {/* Compact Video Preview */}
+      {cameraActive && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          width: '140px',
+          height: '105px',
+          border: '2px solid ' + getAccessibleColor('primary'),
+          borderRadius: '12px',
+          overflow: 'hidden',
+          boxShadow: `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px ${getAccessibleColor('primary')}40`
+        }}>
+          <video
+            ref={videoRef}
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover',
+              transform: 'scaleX(-1)'
+            }}
+            autoPlay
+            muted
+          />
+        </div>
+      )}
 
       {/* ASL Interface */}
       {cameraActive && (
@@ -1006,42 +942,33 @@ export default function InclusiveNeuralCanvas() {
         />
       )}
       
-      {/* Status Display */}
+      {/* Compact Status Badge */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        right: cameraActive ? '480px' : '20px',
+        top: '10px',
+        right: cameraActive ? '160px' : '10px',
         zIndex: 10,
-        backgroundColor: highContrast ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '10px',
-        padding: '15px',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        backdropFilter: 'blur(15px)',
+        borderRadius: '12px',
+        padding: '8px 12px',
         color: 'white',
-        fontSize: '14px',
-        border: `2px solid ${highContrast ? '#ffffff' : 'rgba(255, 255, 255, 0.1)'}`,
-        boxShadow: `0 0 20px ${getAccessibleColor('primary')}30`,
+        fontSize: '11px',
+        border: `2px solid ${(isListening || cameraActive) ? getAccessibleColor('primary') : 'rgba(255, 255, 255, 0.2)'}`,
+        boxShadow: `0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px ${getAccessibleColor('primary')}30`,
         transition: 'right 0.3s ease'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{modes[mode].name}</div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '2px' }}>Vision: {colorBlindModeNames[colorBlindMode]}</div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '2px' }}>Intensity: {intensity.toFixed(1)}</div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '2px' }}>Particles: {particleCount}</div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Speed: {getMotionSpeed().toFixed(1)}x</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '12px' }}>{modes[mode].name}</div>
           <div style={{ 
-            fontSize: '11px', 
-            color: (isListening || cameraActive) ? '#00ff00' : getAccessibleColor('primary'), 
+            fontSize: '10px', 
+            color: (isListening || cameraActive) ? '#00ff44' : getAccessibleColor('primary'), 
             fontWeight: 'bold'
           }}>
-            {isListening && cameraActive ? '🧠🎤🤟 AI + VOICE + ASL' : 
-             isListening ? '🧠🎤 AI VOICE ACTIVE' :
-             cameraActive ? '🧠🤟 AI ASL ACTIVE' : '🧠♿ AI ACCESSIBLE'}
+            {isListening && cameraActive ? '🧠🎤🤟 FULL AI' : 
+             isListening ? '🧠🎤 VOICE' :
+             cameraActive ? '🧠🤟 ASL' : '🧠♿ READY'}
           </div>
-          {(highContrast || reducedMotion) && (
-            <div style={{ fontSize: '10px', color: '#aaa', marginTop: '5px' }}>
-              {highContrast && '🔆 High Contrast'} {reducedMotion && '🐌 Reduced Motion'}
-            </div>
-          )}
         </div>
       </div>
 
@@ -1069,7 +996,8 @@ export default function InclusiveNeuralCanvas() {
             enablePan={false} 
             enableZoom={true} 
             autoRotate={!reducedMotion} 
-            autoRotateSpeed={getMotionSpeed() * 0.5} 
+            autoRotateSpeed={getMotionSpeed() * 0.5}
+            enabled={true}
           />
           
           <NeuralMesh 
@@ -1088,7 +1016,7 @@ export default function InclusiveNeuralCanvas() {
         </Suspense>
       </Canvas>
       
-      {/* Dynamic Background */}
+      {/* Enhanced Background */}
       <div 
         style={{
           position: 'absolute',
@@ -1096,83 +1024,85 @@ export default function InclusiveNeuralCanvas() {
           pointerEvents: 'none',
           background: highContrast ? 
             'none' : 
-            `radial-gradient(circle at center, transparent 0%, ${getAccessibleColor('primary')}15 50%, ${getAccessibleColor('secondary')}10 100%)`,
-          opacity: highContrast ? 0 : 0.4 + intensity * 0.2,
-          animation: (isListening || cameraActive) && !reducedMotion ? 'pulse 2s ease-in-out infinite' : 'none'
+            `radial-gradient(circle at 30% 40%, ${getAccessibleColor('primary')}15 0%, transparent 50%), radial-gradient(circle at 70% 60%, ${getAccessibleColor('secondary')}10 0%, transparent 50%)`,
+          opacity: highContrast ? 0 : 0.3 + intensity * 0.15,
+          animation: (isListening || cameraActive) && !reducedMotion ? 'pulse 3s ease-in-out infinite' : 'none'
         }}
       ></div>
       
-      {/* AI Assistant Button */}
-      <button
-        onClick={() => setShowAIAssistant(true)}
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '20px',
-          zIndex: 15,
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          border: 'none',
-          backgroundColor: 'rgba(138, 43, 226, 0.2)',
-          color: 'white',
-          fontSize: '24px',
-          cursor: 'pointer',
-          boxShadow: '0 0 20px rgba(138, 43, 226, 0.3)',
-          border: '2px solid #8a2be2'
-        }}
-        title="AI Creative Assistant"
-      >
-        🧠
-      </button>
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: ${highContrast ? 0 : 0.3 + intensity * 0.15}; }
+          50% { opacity: ${highContrast ? 0 : 0.5 + intensity * 0.2}; }
+        }
+      `}</style>
       
-      {/* AI Generation Button */}
-      <button
-        onClick={() => setShowAIPanel(true)}
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '90px',
-          zIndex: 15,
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          border: 'none',
-          backgroundColor: 'rgba(255, 0, 255, 0.2)',
-          color: 'white',
-          fontSize: '24px',
-          cursor: 'pointer',
-          boxShadow: '0 0 20px rgba(255, 0, 255, 0.3)',
-          border: '2px solid #ff00ff'
-        }}
-        title="AI Generation"
-      >
-        🤖
-      </button>
-      
-      {/* Export Button */}
-      <button
-        onClick={() => setShowExportPanel(true)}
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '160px',
-          zIndex: 15,
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          border: 'none',
-          backgroundColor: 'rgba(0, 255, 0, 0.2)',
-          color: 'white',
-          fontSize: '24px',
-          cursor: 'pointer',
-          boxShadow: '0 0 20px rgba(0, 255, 0, 0.3)',
-          border: '2px solid #00ff00'
-        }}
-        title="Save & Export"
-      >
-        💾
-      </button>
+      {/* Compact Action Buttons */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '250px',
+        zIndex: 15,
+        display: 'flex',
+        gap: '12px'
+      }}>
+        <button
+          onClick={() => setShowAIAssistant(true)}
+          style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '12px',
+            border: '2px solid #8a2be2',
+            backgroundColor: 'rgba(138, 43, 226, 0.2)',
+            color: 'white',
+            fontSize: '20px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 32px rgba(138, 43, 226, 0.4)',
+            backdropFilter: 'blur(10px)'
+          }}
+          title="AI Creative Assistant"
+        >
+          🧠
+        </button>
+        
+        <button
+          onClick={() => setShowAIPanel(true)}
+          style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '12px',
+            border: '2px solid #ff00ff',
+            backgroundColor: 'rgba(255, 0, 255, 0.2)',
+            color: 'white',
+            fontSize: '20px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 32px rgba(255, 0, 255, 0.4)',
+            backdropFilter: 'blur(10px)'
+          }}
+          title="AI Generation"
+        >
+          🤖
+        </button>
+        
+        <button
+          onClick={() => setShowExportPanel(true)}
+          style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '12px',
+            border: '2px solid #00ff00',
+            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+            color: 'white',
+            fontSize: '20px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 32px rgba(0, 255, 0, 0.4)',
+            backdropFilter: 'blur(10px)'
+          }}
+          title="Save & Export"
+        >
+          💾
+        </button>
+      </div>
       
       {/* AI Creative Assistant Panel */}
       <AIAssistantPanel

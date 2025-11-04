@@ -4,8 +4,8 @@ import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Import shader code
-import neuralVertexShader from '../../shaders/NeuralFlowShader.vert';
-import neuralFragmentShader from '../../shaders/NeuralFlowShader.frag';
+import neuralVertexShader from '../../shaders/NeuralFlowShader.vert?raw';
+import neuralFragmentShader from '../../shaders/NeuralFlowShader.frag?raw';
 
 const NeuralMaterial = shaderMaterial(
   {

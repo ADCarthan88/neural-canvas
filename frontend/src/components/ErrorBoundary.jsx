@@ -3,6 +3,8 @@
  * Catches and handles all React errors gracefully
  */
 
+'use client';
+
 import { Component } from 'react';
 
 class ErrorBoundary extends Component {

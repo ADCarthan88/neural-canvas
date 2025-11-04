@@ -2,7 +2,8 @@
 
 import { Suspense, useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+import ASLAvatar from './ASLAvatar';
 import * as THREE from 'three';
 
 function NeuralMesh({ color, intensity, morphing }) {
@@ -100,6 +101,9 @@ export default function ASLNeuralCanvas() {
   const [secondaryColor, setSecondaryColor] = useState('#8338ec');
   const [speed, setSpeed] = useState(1.0);
   const [morphing, setMorphing] = useState(true);
+  const [dynamicPrompt, setDynamicPrompt] = useState('');
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Voice control states
   const [isListening, setIsListening] = useState(false);
@@ -110,6 +114,7 @@ export default function ASLNeuralCanvas() {
   const [cameraActive, setCameraActive] = useState(false);
   const [lastGesture, setLastGesture] = useState('');
   const [handDetected, setHandDetected] = useState(false);
+  const [gestureConfidence, setGestureConfidence] = useState(0);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -120,6 +125,7 @@ export default function ASLNeuralCanvas() {
   const recognizeGesture = useCallback((landmarks) => {
     if (!landmarks || landmarks.length === 0) {
       setHandDetected(false);
+      setGestureConfidence(0);
       return null;
     }
     
@@ -168,6 +174,18 @@ export default function ASLNeuralCanvas() {
     if (index_tip.y > wrist.y + 0.15 && middle_tip.y > wrist.y) {
       return 'POINT_DOWN';
     }
+
+    if (thumb_tip.x < index_tip.x && thumb_tip.y < index_tip.y && thumb_tip.x > pinky_tip.x) {
+        return 'A';
+    }
+
+    if (index_tip.y < wrist.y && middle_tip.y < wrist.y && ring_tip.y < wrist.y && pinky_tip.y < wrist.y && thumb_tip.y < wrist.y) {
+        return 'B';
+    }
+
+    if (thumb_tip.x > index_tip.x && thumb_tip.y > index_tip.y && pinky_tip.x > wrist.x) {
+        return 'C';
+    }
     
     return null;
   }, []);
@@ -204,6 +222,15 @@ export default function ASLNeuralCanvas() {
         break;
       case 'POINT_DOWN':
         setSpeed(prev => Math.max(0.1, prev - 0.2));
+        break;
+      case 'A':
+        setDynamicPrompt(prev => prev + 'A ');
+        break;
+      case 'B':
+        setDynamicPrompt(prev => prev + 'B ');
+        break;
+      case 'C':
+        setDynamicPrompt(prev => prev + 'C ');
         break;
     }
     
@@ -246,7 +273,10 @@ export default function ASLNeuralCanvas() {
                   const gesture = recognizeGesture(results.multiHandLandmarks[0]);
                   if (gesture) {
                     executeGestureCommand(gesture);
+                    setGestureConfidence(results.multiHandedness[0].score);
                   }
+                } else {
+                  setGestureConfidence(0);
                 }
               });
               
@@ -306,7 +336,34 @@ export default function ASLNeuralCanvas() {
       setParticleCount(2000);
       setMode('neural');
       setMorphing(true);
-    }
+      setDynamicPrompt('');
+    },
+    'delete last word': () => {
+        setDynamicPrompt(prev => prev.trim().split(' ').slice(0, -1).join(' ') + ' ');
+    },
+    'generate image': async () => {
+        if (!dynamicPrompt.trim()) {
+            alert('Please enter a prompt first.');
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const response = await fetch('http://localhost:3001/api/generation/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: dynamicPrompt })
+            });
+            const data = await response.json();
+            setGeneratedImage(data.imageUrl);
+        } catch (error) {
+            console.error('Image generation failed:', error);
+        } finally {
+            setIsGenerating(false);
+        }
+    },
+    'clear image': () => setGeneratedImage(null),
   };
 
   // Initialize speech recognition
@@ -323,16 +380,12 @@ export default function ASLNeuralCanvas() {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
         setLastCommand(transcript);
         
-        const matchedCommand = Object.keys(voiceCommands).find(command => 
-          transcript.includes(command) || command.includes(transcript)
-        );
-        
-        if (matchedCommand) {
-          voiceCommands[matchedCommand]();
-          document.body.style.boxShadow = `0 0 50px ${primaryColor}`;
-          setTimeout(() => {
-            document.body.style.boxShadow = 'none';
-          }, 300);
+        const isCommand = Object.keys(voiceCommands).find(command => transcript.includes(command));
+
+        if (isCommand) {
+            voiceCommands[isCommand]();
+        } else {
+            setDynamicPrompt(prev => prev + transcript + ' ');
         }
       };
       
@@ -487,6 +540,11 @@ export default function ASLNeuralCanvas() {
             <div style={{ color: handDetected ? '#00ff00' : '#ff6666', fontWeight: 'bold' }}>
               {handDetected ? '✋ Hand Detected' : '❌ No Hand'}
             </div>
+            {gestureConfidence > 0 && (
+                <div style={{ color: '#aaa', marginTop: '5px' }}>
+                    Confidence: {Math.round(gestureConfidence * 100)}%
+                </div>
+            )}
             {lastGesture && (
               <>
                 <div style={{ color: '#aaa', marginTop: '5px' }}>Last Gesture:</div>
@@ -520,6 +578,33 @@ export default function ASLNeuralCanvas() {
         />
       </div>
 
+      {/* Generated Image Display */}
+      {generatedImage && (
+        <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 10 }}>
+            <img src={generatedImage} alt="Generated Art" style={{ width: '200px', height: '200px', borderRadius: '10px', border: `2px solid ${primaryColor}` }} />
+            <button
+                onClick={() => setGeneratedImage(null)}
+                style={{
+                    position: 'absolute',
+                    top: '5px',
+                    right: '5px',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '25px',
+                    height: '25px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    lineHeight: '25px',
+                    textAlign: 'center',
+                }}
+            >
+                X
+            </button>
+        </div>
+      )}
+
       {/* Status Display */}
       <div style={{
         position: 'absolute',
@@ -547,10 +632,15 @@ export default function ASLNeuralCanvas() {
             fontWeight: 'bold'
           }}>
             {isListening && cameraActive ? '🎤🤟 VOICE + ASL' : 
-             isListening ? '🎤 VOICE ACTIVE' :
+             isListening ? '🎤 VOICE ACTIVE' : 
              cameraActive ? '🤟 ASL ACTIVE' : '🚀 READY'}
           </div>
         </div>
+      </div>
+
+      {/* ASL Avatar */}
+      <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 5, width: '200px', height: '200px' }}>
+        <ASLAvatar gesture={lastGesture} />
       </div>
 
       {/* 3D Canvas */}

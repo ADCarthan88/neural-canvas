@@ -7,6 +7,7 @@ export class AIImageGenerator {
   constructor() {
     this.apiKey = null;
     this.baseURL = 'https://api.openai.com/v1';
+    this.backendBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     this.fallbackServices = {
       huggingface: 'https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5',
       replicate: 'https://api.replicate.com/v1/predictions'
@@ -24,7 +25,7 @@ export class AIImageGenerator {
     };
     
     this.qualitySettings = {
-      draft: { size: '512x512', quality: 'standard' },
+      draft: { size: '1024x1024', quality: 'standard' },
       standard: { size: '1024x1024', quality: 'standard' },
       hd: { size: '1024x1024', quality: 'hd' },
       ultra: { size: '1792x1024', quality: 'hd' }
@@ -102,6 +103,50 @@ export class AIImageGenerator {
   }
 
   /**
+   * Generate image via backend service
+   */
+  async generateViaBackend(prompt, options = {}) {
+    const {
+      style = 'neural',
+      quality = 'standard',
+    } = options;
+
+    const stylePrompt = this.stylePresets[style] || this.stylePresets.neural;
+    const enhancedPrompt = `${prompt}, ${stylePrompt}`;
+    const qualityConfig = this.qualitySettings[quality] || this.qualitySettings.standard;
+
+    const response = await fetch(`${this.backendBaseUrl}/api/generation/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: enhancedPrompt,
+        style: stylePrompt,
+        size: qualityConfig.size,
+        quality: qualityConfig.quality,
+      })
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.error || `Backend generation failed (${response.status})`);
+    }
+
+    const data = await response.json();
+
+    return {
+      success: true,
+      images: [{ url: data.imageUrl, revised_prompt: data.revisedPrompt || enhancedPrompt }],
+      originalPrompt: prompt,
+      enhancedPrompt,
+      style,
+      quality,
+      service: 'backend'
+    };
+  }
+
+  /**
    * Generate image with Hugging Face (fallback)
    */
   async generateWithHuggingFace(prompt, options = {}) {
@@ -152,20 +197,27 @@ export class AIImageGenerator {
    * Generate image with automatic fallback
    */
   async generateImage(prompt, options = {}) {
-    const { service = 'auto' } = options;
+    const { service = 'backend' } = options;
 
-    // Try DALL-E first if API key is available
-    if ((service === 'auto' || service === 'dalle') && this.apiKey) {
+    if (service === 'backend' || service === 'auto') {
       try {
-        return await this.generateWithDALLE(prompt, options);
+        return await this.generateViaBackend(prompt, options);
       } catch (error) {
-        console.warn('DALL-E failed, trying fallback:', error.message);
-        if (service === 'dalle') throw error; // Don't fallback if specifically requested DALL-E
+        if (service === 'backend') throw error;
+        console.warn('Backend generation failed, trying next service:', error.message);
       }
     }
 
-    // Fallback to Hugging Face
-    if (service === 'auto' || service === 'huggingface') {
+    if ((service === 'dalle' || service === 'auto') && this.apiKey) {
+      try {
+        return await this.generateWithDALLE(prompt, options);
+      } catch (error) {
+        if (service === 'dalle') throw error;
+        console.warn('DALL-E failed, trying fallback:', error.message);
+      }
+    }
+
+    if (service === 'huggingface' || service === 'auto') {
       return await this.generateWithHuggingFace(prompt, options);
     }
 
@@ -225,8 +277,9 @@ export class AIImageGenerator {
   /**
    * Generate variations of current canvas
    */
-  async generateCanvasVariations(canvasState, count = 3) {
-    const basePrompt = this.generatePromptFromCanvas(canvasState);
+  async generateCanvasVariations(canvasState, count = 3, options = {}) {
+  const basePrompt = this.generatePromptFromCanvas(canvasState);
+  const styleOption = options.style || canvasState.mode;
     
     const variations = [
       `${basePrompt}, artistic interpretation`,
@@ -241,8 +294,9 @@ export class AIImageGenerator {
     for (let i = 0; i < Math.min(count, variations.length); i++) {
       try {
         const result = await this.generateImage(variations[i], {
-          style: canvasState.mode,
-          quality: 'standard'
+          style: styleOption,
+          quality: 'standard',
+          ...options,
         });
         results.push({
           ...result,

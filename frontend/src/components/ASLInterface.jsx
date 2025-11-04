@@ -102,7 +102,7 @@ export default function ASLInterface({
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       {/* Control Buttons */}
       <div className="flex gap-2 mb-4">
