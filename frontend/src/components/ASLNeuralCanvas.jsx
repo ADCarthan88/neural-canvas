@@ -104,6 +104,12 @@ export default function ASLNeuralCanvas() {
   const [dynamicPrompt, setDynamicPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [spellMode, setSpellMode] = useState(true);
+  const [lastLetterTs, setLastLetterTs] = useState(0);
+  const LETTER_COOLDOWN_MS = 800;
+  const [heliaSaving, setHeliaSaving] = useState(false);
+  const [heliaCid, setHeliaCid] = useState('');
+  const [heliaError, setHeliaError] = useState('');
   
   // Voice control states
   const [isListening, setIsListening] = useState(false);
@@ -120,6 +126,7 @@ export default function ASLNeuralCanvas() {
   const canvasRef = useRef(null);
   const recognitionRef = useRef(null);
   const handsRef = useRef(null);
+  const lastLetterTsRef = useRef(0);
 
   // Simple gesture recognition based on hand landmarks
   const recognizeGesture = useCallback((landmarks) => {
@@ -210,12 +217,13 @@ export default function ASLNeuralCanvas() {
         setParticleCount(prev => Math.max(500, prev - 500));
         break;
       case 'PEACE':
-        // Cycle through colors
-        const colors = ['#ff006e', '#00d4ff', '#8b5cf6', '#ff6b35', '#00ff41'];
-        const currentIndex = colors.indexOf(primaryColor);
-        const nextIndex = (currentIndex + 1) % colors.length;
-        setPrimaryColor(colors[nextIndex]);
-        setSecondaryColor(colors[(nextIndex + 1) % colors.length]);
+        setPrimaryColor(prev => {
+          const colors = ['#ff006e', '#00d4ff', '#8b5cf6', '#ff6b35', '#00ff41'];
+          const currentIndex = colors.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % colors.length;
+          setSecondaryColor(colors[(nextIndex + 1) % colors.length]);
+          return colors[nextIndex];
+        });
         break;
       case 'POINT_UP':
         setSpeed(prev => Math.min(3, prev + 0.2));
@@ -224,22 +232,53 @@ export default function ASLNeuralCanvas() {
         setSpeed(prev => Math.max(0.1, prev - 0.2));
         break;
       case 'A':
-        setDynamicPrompt(prev => prev + 'A ');
-        break;
       case 'B':
-        setDynamicPrompt(prev => prev + 'B ');
+      case 'C': {
+        if (spellMode) {
+          const now = Date.now();
+          if (now - lastLetterTsRef.current > LETTER_COOLDOWN_MS) {
+            setDynamicPrompt(prev => prev + gesture.toLowerCase());
+            lastLetterTsRef.current = now;
+          }
+        }
         break;
-      case 'C':
-        setDynamicPrompt(prev => prev + 'C ');
-        break;
+      }
     }
     
     // Visual feedback
-    document.body.style.boxShadow = `0 0 50px ${primaryColor}`;
+    document.body.style.boxShadow = `0 0 50px ${gesture ? '#00ff41' : '#ff006e'}`;
     setTimeout(() => {
       document.body.style.boxShadow = 'none';
     }, 300);
-  }, [primaryColor]);
+  }, [spellMode, LETTER_COOLDOWN_MS]);
+
+  const appendSpace = () => setDynamicPrompt(prev => (prev.endsWith(' ') || prev.length === 0) ? prev : prev + ' ');
+  const backspace = () => setDynamicPrompt(prev => prev.slice(0, -1));
+  const clearPrompt = () => setDynamicPrompt('');
+
+  const saveToHelia = async () => {
+    try {
+      setHeliaSaving(true);
+      setHeliaError('');
+      setHeliaCid('');
+      const { default: HeliaStorage } = await import('../lib/HeliaStorage');
+      const storage = new HeliaStorage();
+      const payload = {
+        type: 'neural-canvas-session',
+        timestamp: Date.now(),
+        prompt: dynamicPrompt.trim(),
+        settings: { mode, intensity, particleCount, primaryColor, secondaryColor, speed, morphing },
+        imageUrl: generatedImage || null
+      };
+      const cid = await storage.uploadFile(payload);
+      setHeliaCid(cid);
+    } catch (e) {
+      console.error('Save to Helia failed:', e);
+      setHeliaError(e?.message || 'Unknown error');
+    } finally {
+      setHeliaSaving(false);
+    }
+  };
 
   // Initialize camera and hand tracking
   const startCamera = useCallback(async () => {
@@ -256,41 +295,63 @@ export default function ASLNeuralCanvas() {
           
           // Start hand detection
           if (typeof window !== 'undefined') {
-            import('@mediapipe/hands').then(({ Hands }) => {
-              const hands = new Hands({
+            const initHands = (HandsCtor) => {
+              const hands = new HandsCtor({
                 locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
               });
-              
+
               hands.setOptions({
                 maxNumHands: 1,
                 modelComplexity: 1,
                 minDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
               });
-              
+
               hands.onResults((results) => {
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                   const gesture = recognizeGesture(results.multiHandLandmarks[0]);
                   if (gesture) {
                     executeGestureCommand(gesture);
-                    setGestureConfidence(results.multiHandedness[0].score);
+                    setGestureConfidence(results.multiHandedness?.[0]?.score ?? 0);
                   }
                 } else {
                   setGestureConfidence(0);
                 }
               });
-              
+
               handsRef.current = hands;
-              
-              // Process video frames
+
               const processFrame = () => {
-                if (videoRef.current && cameraActive) {
-                  hands.send({ image: videoRef.current });
+                if (videoRef.current && cameraActive && handsRef.current) {
+                  handsRef.current.send({ image: videoRef.current });
                   requestAnimationFrame(processFrame);
                 }
               };
               processFrame();
+            };
+
+            const loadScript = (src) => new Promise((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = src;
+              s.async = true;
+              s.onload = () => resolve();
+              s.onerror = (e) => reject(e);
+              document.head.appendChild(s);
             });
+
+            // Load MediaPipe Hands from CDN only to avoid bundler resolution errors
+            loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js')
+              .then(() => {
+                const HandsCtor = window.Hands;
+                if (HandsCtor) {
+                  initHands(HandsCtor);
+                } else {
+                  console.error('MediaPipe Hands failed to attach to window.');
+                }
+              })
+              .catch((e) => {
+                console.error('Failed to load MediaPipe Hands from CDN', e);
+              });
           }
         };
       }
@@ -310,63 +371,70 @@ export default function ASLNeuralCanvas() {
     setHandDetected(false);
   }, []);
 
-  // Voice commands (keeping existing functionality)
-  const voiceCommands = {
-    'make it brighter': () => setIntensity(Math.min(3, intensity + 0.5)),
-    'make it dimmer': () => setIntensity(Math.max(0, intensity - 0.5)),
-    'more particles': () => setParticleCount(Math.min(8000, particleCount + 1000)),
-    'less particles': () => setParticleCount(Math.max(500, particleCount - 1000)),
-    'speed up': () => setSpeed(Math.min(3, speed + 0.3)),
-    'slow down': () => setSpeed(Math.max(0.1, speed - 0.3)),
-    'make it red': () => { setPrimaryColor('#ff0000'); setSecondaryColor('#ff6666'); },
-    'make it blue': () => { setPrimaryColor('#0066ff'); setSecondaryColor('#66aaff'); },
-    'make it green': () => { setPrimaryColor('#00ff00'); setSecondaryColor('#66ff66'); },
-    'psychedelic mode': () => {
-      setIntensity(2.5);
-      setPrimaryColor('#ff00ff');
-      setSecondaryColor('#00ffff');
-      setSpeed(2);
-      setParticleCount(6000);
-    },
-    'reset everything': () => {
-      setIntensity(1.0);
-      setPrimaryColor('#ff006e');
-      setSecondaryColor('#8338ec');
-      setSpeed(1.0);
-      setParticleCount(2000);
-      setMode('neural');
-      setMorphing(true);
-      setDynamicPrompt('');
-    },
-    'delete last word': () => {
+  // Voice command handler with proper closure (useCallback ensures it has current state)
+  const handleVoiceCommand = useCallback((transcript) => {
+    const commandMap = {
+      'make it brighter': () => setIntensity(prev => Math.min(3, prev + 0.5)),
+      'make it dimmer': () => setIntensity(prev => Math.max(0, prev - 0.5)),
+      'more particles': () => setParticleCount(prev => Math.min(8000, prev + 1000)),
+      'less particles': () => setParticleCount(prev => Math.max(500, prev - 1000)),
+      'speed up': () => setSpeed(prev => Math.min(3, prev + 0.3)),
+      'slow down': () => setSpeed(prev => Math.max(0.1, prev - 0.3)),
+      'make it red': () => { setPrimaryColor('#ff0000'); setSecondaryColor('#ff6666'); },
+      'make it blue': () => { setPrimaryColor('#0066ff'); setSecondaryColor('#66aaff'); },
+      'make it green': () => { setPrimaryColor('#00ff00'); setSecondaryColor('#66ff66'); },
+      'psychedelic mode': () => {
+        setIntensity(2.5);
+        setPrimaryColor('#ff00ff');
+        setSecondaryColor('#00ffff');
+        setSpeed(2);
+        setParticleCount(6000);
+      },
+      'reset everything': () => {
+        setIntensity(1.0);
+        setPrimaryColor('#ff006e');
+        setSecondaryColor('#8338ec');
+        setSpeed(1.0);
+        setParticleCount(2000);
+        setMode('neural');
+        setMorphing(true);
+        setDynamicPrompt('');
+      },
+      'delete last word': () => {
         setDynamicPrompt(prev => prev.trim().split(' ').slice(0, -1).join(' ') + ' ');
-    },
-    'generate image': async () => {
-        if (!dynamicPrompt.trim()) {
+      },
+      'generate image': async () => {
+        setDynamicPrompt(current => {
+          if (!current.trim()) {
             alert('Please enter a prompt first.');
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const response = await fetch('http://localhost:3001/api/generation/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt: dynamicPrompt })
-            });
-            const data = await response.json();
-            setGeneratedImage(data.imageUrl);
-        } catch (error) {
-            console.error('Image generation failed:', error);
-        } finally {
-            setIsGenerating(false);
-        }
-    },
-    'clear image': () => setGeneratedImage(null),
-  };
+            return current;
+          }
+          setIsGenerating(true);
+          const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+          fetch(`${baseUrl}/api/generation/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: current })
+          })
+            .then(res => res.json())
+            .then(data => setGeneratedImage(data.imageUrl))
+            .catch(err => console.error('Image generation failed:', err))
+            .finally(() => setIsGenerating(false));
+          return current;
+        });
+      },
+      'clear image': () => setGeneratedImage(null),
+    };
 
-  // Initialize speech recognition
+    const isCommand = Object.keys(commandMap).find(cmd => transcript.includes(cmd));
+    if (isCommand) {
+      commandMap[isCommand]();
+    } else {
+      setDynamicPrompt(prev => prev + transcript + ' ');
+    }
+  }, []);
+
+  // Initialize speech recognition with current voice handler
   useEffect(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
       setVoiceSupported(true);
@@ -379,14 +447,7 @@ export default function ASLNeuralCanvas() {
       recognition.onresult = (event) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
         setLastCommand(transcript);
-        
-        const isCommand = Object.keys(voiceCommands).find(command => transcript.includes(command));
-
-        if (isCommand) {
-            voiceCommands[isCommand]();
-        } else {
-            setDynamicPrompt(prev => prev + transcript + ' ');
-        }
+        handleVoiceCommand(transcript);
       };
       
       recognition.onerror = () => setIsListening(false);
@@ -396,7 +457,7 @@ export default function ASLNeuralCanvas() {
       
       recognitionRef.current = recognition;
     }
-  }, [isListening, primaryColor, intensity, particleCount, speed, morphing]);
+  }, [isListening, handleVoiceCommand]);
 
   const toggleVoiceControl = () => {
     if (!voiceSupported) {
@@ -565,6 +626,51 @@ export default function ASLNeuralCanvas() {
             ☝️ Point Up → Speed Up<br/>
             👇 Point Down → Slow Down
           </div>
+        </div>
+
+        {/* Spell Mode */}
+        <div style={{ marginBottom: '25px' }}>
+          <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '10px' }}>🔤 Spell Mode</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <label style={{ color: 'white', fontSize: '14px' }}>
+              <input type="checkbox" checked={spellMode} onChange={(e) => setSpellMode(e.target.checked)} style={{ marginRight: '8px' }} />
+              Enable letter capture (A/B/C MVP)
+            </label>
+          </div>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '10px', borderRadius: '8px', marginBottom: '10px' }}>
+            <div style={{ color: '#aaa', fontSize: '12px', marginBottom: '6px' }}>Prompt</div>
+            <div style={{ color: 'white', fontWeight: 'bold', wordBreak: 'break-word', minHeight: '24px' }}>{dynamicPrompt || '…'}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={appendSpace} style={{ padding: '8px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: '#333', color: 'white' }}>Space</button>
+            <button onClick={backspace} style={{ padding: '8px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: '#333', color: 'white' }}>Backspace</button>
+            <button onClick={clearPrompt} style={{ padding: '8px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: '#333', color: 'white' }}>Clear</button>
+          </div>
+        </div>
+
+        {/* Save / Generate */}
+        <div style={{ display: 'grid', gap: '10px' }}>
+          <button
+            onClick={saveToHelia}
+            disabled={heliaSaving}
+            style={{
+              width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              background: heliaSaving ? 'linear-gradient(45deg,#555,#888)' : 'linear-gradient(45deg,#39ff14,#00ff41)',
+              color: 'black', fontSize: '14px', fontWeight: 'bold'
+            }}
+          >
+            {heliaSaving ? 'Saving…' : '💾 Save to Helia'}
+          </button>
+          {heliaCid && (
+            <div style={{ fontSize: '12px', color: '#aaa' }}>
+              Saved CID: <a href={`https://ipfs.io/ipfs/${heliaCid}`} target="_blank" rel="noreferrer" style={{ color: '#00ff99' }}>{heliaCid}</a>
+            </div>
+          )}
+          {heliaError && (
+            <div style={{ fontSize: '12px', color: '#ff6b6b' }}>
+              Save failed: {heliaError}
+            </div>
+          )}
         </div>
 
         {/* Hidden video element for camera */}
